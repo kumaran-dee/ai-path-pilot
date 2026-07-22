@@ -1,0 +1,27 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+backend/venv/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# Environment Variables
+.env
+backend/.env
+
+# Database
+backend/app.db
+backend/instance/
+
+# User Uploads
+uploads/
+backend/uploads/
+
+# OS Files
+.DS_Store
+Thumbs.db

@@ -1,0 +1,11 @@
+Flask==3.0.2
+Flask-SQLAlchemy==3.1.1
+Flask-JWT-Extended==4.6.0
+google-generativeai==0.4.1
+python-dotenv==1.0.1
+pdfplumber==0.11.0
+python-docx==1.1.0
+Werkzeug==3.0.1
+pandas==2.2.1
+numpy==1.26.4
+twilio==9.0.0
