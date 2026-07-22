@@ -181,6 +181,11 @@ export default function Dashboard() {
                     }}
                     placeholder="Enter URL (https://...)"
                     className={`w-full bg-gray-900 border ${editError ? 'border-red-500 focus:ring-red-500' : 'border-gray-700'} rounded p-2 text-sm text-white mb-1 outline-none`}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && !editError) {
+                        handleSave(slot.id, editValue);
+                      }
+                    }}
                     autoFocus
                   />
                   {editError && <span className="text-red-400 text-[10px] mb-2 w-full text-left">{editError}</span>}
