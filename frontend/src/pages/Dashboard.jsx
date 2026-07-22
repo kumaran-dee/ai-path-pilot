@@ -326,11 +326,6 @@ export default function Dashboard() {
                        <FileText className="text-gray-400" size={24} />}
                       <h3 className="text-lg font-bold text-white capitalize">{platform}</h3>
                     </div>
-                    {data.score > 0 && (
-                      <div className="bg-primary/20 text-primary px-2 py-1 rounded text-xs font-bold">
-                        Score: {data.score}
-                      </div>
-                    )}
                   </div>
                   
                   <div className="mb-4">
