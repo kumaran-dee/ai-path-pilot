@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
-import { FileText, Link as LinkIcon, UploadCloud, Sparkles, CheckCircle, XCircle, Loader2, AlertCircle, ArrowRight } from 'lucide-react';
+import { FileText, Link as LinkIcon, UploadCloud, Sparkles, CheckCircle, XCircle, Loader2, AlertCircle, ArrowRight, Lightbulb, BookOpen, User, Star } from 'lucide-react';
 import { compareResumeToJob } from '../services/api';
 
 export default function Compare() {
@@ -110,25 +110,35 @@ export default function Compare() {
               <h2 className="text-3xl font-bold mb-2">AI Match Report</h2>
               <p className="text-gray-400">Here's how your resume stacks up against the job.</p>
             </div>
-            <div className="mt-6 md:mt-0 flex flex-col items-center">
-              <div className="text-5xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-purple-400">
-                {results.match_score}%
+            <div className="mt-6 md:mt-0 flex space-x-8">
+              <div className="flex flex-col items-center">
+                <div className="text-4xl font-extrabold text-blue-400">{results.resume_score}</div>
+                <span className="text-xs text-gray-500 uppercase tracking-widest mt-1">Resume Score</span>
               </div>
-              <span className="text-sm text-gray-500 uppercase tracking-widest mt-1">Match Score</span>
+              <div className="flex flex-col items-center">
+                <div className="text-4xl font-extrabold text-pink-400">{results.career_readiness}</div>
+                <span className="text-xs text-gray-500 uppercase tracking-widest mt-1">Career Readiness</span>
+              </div>
+              <div className="flex flex-col items-center">
+                <div className="text-4xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-purple-400">
+                  {results.match_score}%
+                </div>
+                <span className="text-xs text-gray-500 uppercase tracking-widest mt-1">Match Score</span>
+              </div>
             </div>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
-            {/* Strengths */}
+            {/* Matched Skills */}
             <div>
               <h3 className="text-xl font-semibold mb-5 flex items-center text-green-400">
-                <CheckCircle className="mr-2" /> Strengths
+                <CheckCircle className="mr-2" /> Matched Skills
               </h3>
               <ul className="space-y-4">
-                {results.strengths?.map((strength, idx) => (
+                {results.matched_skills?.map((skill, idx) => (
                   <li key={idx} className="flex items-start bg-gray-900/50 p-4 rounded-xl border border-gray-800">
                     <CheckCircle size={20} className="text-green-500 mr-3 flex-shrink-0 mt-0.5" />
-                    <span className="text-gray-300 leading-relaxed">{strength}</span>
+                    <span className="text-gray-300 leading-relaxed">{skill}</span>
                   </li>
                 ))}
               </ul>
@@ -158,10 +168,45 @@ export default function Compare() {
             </div>
           </div>
 
-          {/* Verdict */}
-          <div className="mt-10 bg-gray-900/80 p-6 rounded-2xl border border-gray-700">
-            <h3 className="text-lg font-bold text-white mb-2">Final Verdict</h3>
-            <p className="text-gray-400 leading-relaxed">{results.verdict}</p>
+          {/* Improvements & Courses Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-10 mt-10">
+            <div>
+              <h3 className="text-xl font-semibold mb-5 flex items-center text-blue-400">
+                <Lightbulb className="mr-2" /> Resume Improvements
+              </h3>
+              <ul className="space-y-3">
+                {results.resume_improvements?.map((item, idx) => (
+                  <li key={idx} className="flex items-start text-gray-300">
+                    <span className="text-blue-500 mr-2">•</span> {item}
+                  </li>
+                ))}
+              </ul>
+            </div>
+            
+            <div>
+              <h3 className="text-xl font-semibold mb-5 flex items-center text-pink-400">
+                <BookOpen className="mr-2" /> Recommended Courses
+              </h3>
+              <ul className="space-y-3">
+                {results.recommended_courses?.map((course, idx) => (
+                  <li key={idx} className="flex items-start text-gray-300">
+                    <span className="text-pink-500 mr-2">•</span> {course}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </div>
+
+          {/* AI Recommendation Verdict */}
+          <div className="mt-12 bg-gray-900/80 p-8 rounded-2xl border border-gray-700 flex flex-col items-center text-center">
+            <h3 className="text-lg font-bold text-gray-400 mb-2 uppercase tracking-widest">Should you apply?</h3>
+            <div className={`text-4xl font-extrabold mb-4 ${
+              results.should_apply === 'YES' ? 'text-green-400' : 
+              results.should_apply === 'MAYBE' ? 'text-yellow-400' : 'text-red-400'
+            }`}>
+              {results.should_apply}
+            </div>
+            <p className="text-gray-300 leading-relaxed max-w-3xl">{results.reason}</p>
           </div>
         </motion.div>
       )}

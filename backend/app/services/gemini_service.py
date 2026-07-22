@@ -69,7 +69,7 @@ class GeminiService:
 
     def compare_resume_to_job(self, resume_text: str, job_text: str) -> dict:
         prompt = f"""
-        Act as an expert Technical Recruiter. You are given a candidate's resume and a job description.
+        Act as an expert Technical Recruiter and Career Coach. You are given a candidate's resume and a job description.
         Evaluate how well the candidate fits the job.
         
         Resume:
@@ -80,10 +80,16 @@ class GeminiService:
         
         Return ONLY a raw JSON object (without markdown code blocks) matching this schema exactly:
         {{
-            "match_score": 85,
-            "strengths": ["string", "string"],
+            "resume_score": 95,
+            "career_readiness": 91,
+            "match_score": 89,
+            "matched_skills": ["string", "string"],
             "missing_skills": ["string", "string"],
-            "verdict": "A brief paragraph summarizing their chances and what they should focus on."
+            "resume_improvements": ["string", "string"],
+            "recommended_courses": ["string", "string"],
+            "learning_roadmap": ["string", "string"],
+            "should_apply": "YES/MAYBE/NO",
+            "reason": "Explain WHY they should or should not apply in a brief paragraph."
         }}
         """
         response_text = self.generate_content(prompt)
@@ -96,10 +102,16 @@ class GeminiService:
         except Exception as e:
             print("Failed to parse JSON from Gemini (Compare):", str(e))
             return {
+                "resume_score": 0,
+                "career_readiness": 0,
                 "match_score": 0,
-                "strengths": [],
+                "matched_skills": [],
                 "missing_skills": [],
-                "verdict": "Error analyzing the match."
+                "resume_improvements": [],
+                "recommended_courses": [],
+                "learning_roadmap": [],
+                "should_apply": "NO",
+                "reason": "Error analyzing the match."
             }
 
     def generate_roadmap(self, missing_skills: list) -> dict:
