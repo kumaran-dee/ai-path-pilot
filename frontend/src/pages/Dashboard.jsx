@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { getLinks, updateLinks, scanProfile, uploadResume, getDashboardSummary } from '../services/api';
-import { FileText, Globe, Briefcase, Terminal, Cpu, Loader2, Sparkles, GraduationCap, Code, BookOpen, ChevronRight, CheckCircle, XCircle } from 'lucide-react';
+import { FileText, Globe, Briefcase, Terminal, Cpu, Loader2, Sparkles, GraduationCap, Code, BookOpen, ChevronRight, CheckCircle, XCircle, MessageCircle, ExternalLink } from 'lucide-react';
 
 export default function Dashboard() {
   const [links, setLinks] = useState({
@@ -238,6 +238,34 @@ export default function Dashboard() {
       </div>
 
 
+      {/* WhatsApp Community Banner */}
+      <div className="mt-8 bg-[#00A884] rounded-2xl p-6 md:p-8 flex flex-col md:flex-row items-center justify-between relative overflow-hidden shadow-lg border border-[#00c59a]">
+        {/* Decorative background circles */}
+        <div className="absolute -right-20 -top-20 w-64 h-64 border-[30px] border-white/5 rounded-full pointer-events-none"></div>
+        <div className="absolute -right-10 -bottom-10 w-48 h-48 border-[20px] border-white/5 rounded-full pointer-events-none"></div>
+
+        <div className="flex items-center space-x-6 z-10 w-full md:w-auto">
+          <div className="hidden sm:flex bg-white/20 p-4 rounded-2xl items-center justify-center backdrop-blur-sm border border-white/30 shrink-0">
+            <MessageCircle size={36} className="text-white" />
+          </div>
+          <div>
+            <h2 className="text-xl md:text-2xl font-bold text-white mb-2">Join the Official WhatsApp Community</h2>
+            <p className="text-white/90 text-sm md:text-base max-w-2xl leading-relaxed">
+              Stay updated with real-time announcements, coordinate with your team members, and get direct assistance from mentors and organizers.
+            </p>
+          </div>
+        </div>
+
+        <a 
+          href="https://chat.whatsapp.com/GDXtxLFZdvs228lJm6WBLd"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="mt-6 md:mt-0 flex items-center justify-center space-x-2 bg-white text-[#00A884] font-bold px-6 py-3 rounded-xl hover:bg-gray-50 transition-colors shrink-0 shadow-sm z-10 w-full md:w-auto"
+        >
+          <span>Join WhatsApp Group</span>
+          <ExternalLink size={18} />
+        </a>
+      </div>
 
       {/* Action Button */}
       <div className="mt-12 flex justify-center">
