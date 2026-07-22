@@ -79,40 +79,53 @@ You are an expert resume parser with OCR capabilities.
 The attached file is a resume (filename: {filename}).
 Extract ALL resume content you can read from it.
 
+==========================
+STRICT RULES
+==========================
+1. NEVER invent or assume any information.
+2. NEVER generate placeholder values.
+3. NEVER infer experience, skills, certifications, projects, or achievements.
+4. If a field is not present, return:
+   - null for single values
+   - [] for arrays
+5. Every extracted value must be directly supported by the resume.
+6. Do not summarize or rewrite information.
+7. Return ONLY valid JSON.
+8. Do NOT include markdown or explanations.
+
 Return ONLY a valid JSON object (no markdown, no backticks) with this exact schema:
 {{
-    "FullName": "string",
-    "EmailAddress": "string or null",
-    "PhoneNumber": "string or null",
-    "LinkedInURL": "string or null",
-    "GitHubURL": "string or null",
-    "PortfolioURL": "string or null",
-    "Location": "string or null",
-    "Skills": ["all skills mentioned"],
-    "TechnicalSkills": ["programming languages, frameworks, tools, databases"],
-    "SoftSkills": ["communication, teamwork, leadership, etc."],
-    "Languages": ["spoken/written languages with proficiency"],
-    "Education": [
-        {{"Degree": "string", "Institution": "string", "FieldOfStudy": "string", "Year": "string", "CGPA": "string or null"}}
-    ],
-    "Experience": [
-        {{"Title": "string", "Company": "string", "Duration": "string", "Description": "string"}}
-    ],
-    "Projects": [
-        {{"Title": "string", "Description": "string", "TechnologiesUsed": ["list"], "Link": "string or null"}}
-    ],
-    "Certifications": ["list"],
-    "Achievements": ["list"],
-    "Research": ["list of publications or research work"],
-    "VolunteerWork": ["list"],
-    "Interests": ["hobbies and interests"],
-    "CareerDomain": "primary career domain",
-    "PreferredRoles": ["target job roles based on resume content"],
-    "YearsOfExperience": "number or 0 (Student/Fresher)",
-    "ResumeScore": 85,
-    "CareerReadinessScore": 80,
-    "ResumeStrengths": ["2-3 key strengths"],
-    "ResumeWeaknesses": ["2-3 areas to improve"]
+  "PersonalInformation": {{
+    "FullName": "",
+    "DateOfBirth": null,
+    "Gender": null,
+    "Nationality": null,
+    "CurrentLocation": null
+  }},
+  "ContactDetails": {{
+    "Email": "",
+    "Phone": "",
+    "LinkedIn": "",
+    "GitHub": "",
+    "Portfolio": "",
+    "Website": "",
+    "Address": null
+  }},
+  "Education": [],
+  "Experience": [],
+  "Skills": [],
+  "TechnicalSkills": [],
+  "SoftSkills": [],
+  "Projects": [],
+  "Certifications": [],
+  "Achievements": [],
+  "Research": [],
+  "Languages": [],
+  "CareerDomain": "",
+  "PreferredRoles": [],
+  "ResumeScore": 85,
+  "CareerReadiness": 80,
+  "AdditionalMetadata": {{}}
 }}
 """
 
@@ -136,7 +149,48 @@ Return ONLY a valid JSON object (no markdown, no backticks) with this exact sche
             result = json.loads(resp.read().decode())
             raw = result['candidates'][0]['content']['parts'][0]['text']
             raw = raw.strip().lstrip('```json').lstrip('```').rstrip('```').strip()
-            return json.loads(raw)
+            
+            profile = json.loads(raw)
+            # ── Inject compatibility keys for front-end rendering ──
+            personal_info = profile.get("PersonalInformation") or {}
+            contact = profile.get("ContactDetails") or {}
+            
+            profile["FullName"] = personal_info.get("FullName") or ""
+            profile["ResumeScore"] = profile.get("ResumeScore") or 0
+            profile["CareerReadinessScore"] = profile.get("CareerReadiness") or 0
+            profile["Skills"] = profile.get("Skills") or []
+            
+            tech_skills = profile.get("TechnicalSkills") or []
+            profile["TechnicalSkills"] = tech_skills if isinstance(tech_skills, list) else []
+            profile["SoftSkills"] = profile.get("SoftSkills") or []
+            
+            profile["Education"] = profile.get("Education") or []
+            profile["Experience"] = profile.get("Experience") or []
+            profile["Projects"] = profile.get("Projects") or []
+            profile["Certifications"] = profile.get("Certifications") or []
+            profile["Achievements"] = profile.get("Achievements") or []
+            profile["Research"] = profile.get("Research") or []
+            profile["Languages"] = profile.get("Languages") or []
+            profile["Interests"] = [] # Not explicitly in new schema
+            
+            c_domain = profile.get("CareerDomain") or ""
+            profile["CareerDomain"] = ", ".join(c_domain) if isinstance(c_domain, list) else str(c_domain)
+            pref_roles = profile.get("PreferredRoles") or ""
+            profile["PreferredRole"] = ", ".join(pref_roles) if isinstance(pref_roles, list) else str(pref_roles)
+            profile["PreferredRoles"] = pref_roles if isinstance(pref_roles, list) else [str(pref_roles)]
+            
+            profile["EmailAddress"] = contact.get("Email") or ""
+            profile["PhoneNumber"] = contact.get("Phone") or ""
+            profile["Location"] = contact.get("Address") or personal_info.get("CurrentLocation") or ""
+            profile["LinkedInURL"] = contact.get("LinkedIn") or ""
+            profile["GitHubURL"] = contact.get("GitHub") or ""
+            profile["PortfolioURL"] = contact.get("Portfolio") or ""
+                
+            profile["YearsOfExperience"] = "0 (Student/Fresher)" # Derived later usually
+            profile["ResumeStrengths"] = []
+            profile["ResumeWeaknesses"] = []
+
+            return profile
     except Exception as e:
         print(f"Gemini Vision extraction failed: {e}")
         return None
