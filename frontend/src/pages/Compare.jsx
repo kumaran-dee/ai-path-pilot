@@ -1,12 +1,308 @@
 import React, { useState } from 'react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
-import { FileText, Link as LinkIcon, UploadCloud, Sparkles, CheckCircle, XCircle, Loader2, AlertCircle, ArrowRight, Lightbulb, BookOpen, Eye, X, Copy, Check } from 'lucide-react';
-import { compareResumeToJob, getResumeDetails } from '../services/api';
+import {
+  FileText, Link as LinkIcon, UploadCloud, Sparkles,
+  CheckCircle, XCircle, Loader2, AlertCircle, ArrowRight,
+  Lightbulb, BookOpen, Eye, X, Copy, Check, Terminal,
+  User, Mail, Phone, MapPin, Code2, Award, GraduationCap,
+  Briefcase, Star, BookMarked, Globe, ExternalLink
+} from 'lucide-react';
+import { compareResumeToJob, uploadResume, getResumeDetails } from '../services/api';
 
-// Set to false to hide/remove developer testing features before production
+// ── Set to false to strip dev features before final production release ──
 const SHOW_DEV_FEATURES = true;
 
+// ─────────────────────────────────────────────
+// Syntax highlighter (pure regex, no deps)
+// ─────────────────────────────────────────────
+function syntaxHighlight(json) {
+  if (!json) return '';
+  if (typeof json !== 'string') json = JSON.stringify(json, undefined, 2);
+  json = json
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
+  return json.replace(
+    /("(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?)/g,
+    (match) => {
+      let cls = 'text-amber-400'; // number
+      if (/^"/.test(match)) {
+        cls = /:$/.test(match) ? 'text-sky-300 font-semibold' : 'text-emerald-400';
+      } else if (/true|false/.test(match)) {
+        cls = 'text-violet-400';
+      } else if (/null/.test(match)) {
+        cls = 'text-rose-400';
+      }
+      return `<span class="${cls}">${match}</span>`;
+    }
+  );
+}
+
+// ─────────────────────────────────────────────
+// Structured Resume Viewer (card-based display)
+// ─────────────────────────────────────────────
+function Section({ icon: Icon, title, color, children }) {
+  const [open, setOpen] = useState(true);
+  return (
+    <div className="mb-5 rounded-2xl border border-gray-800 overflow-hidden">
+      <button
+        onClick={() => setOpen(o => !o)}
+        className="w-full flex items-center justify-between px-5 py-4 bg-gray-900/80 hover:bg-gray-800/80 transition-colors"
+      >
+        <div className="flex items-center gap-3">
+          <Icon size={18} className={color} />
+          <span className={`font-bold text-sm uppercase tracking-widest ${color}`}>{title}</span>
+        </div>
+        <span className="text-gray-500 text-xs">{open ? '▲ Collapse' : '▼ Expand'}</span>
+      </button>
+      {open && <div className="px-5 py-4 bg-[#0f1117]">{children}</div>}
+    </div>
+  );
+}
+
+function Chip({ text, color = 'bg-blue-900/50 text-blue-300 border-blue-800' }) {
+  return (
+    <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold border ${color} mr-2 mb-2`}>
+      {text}
+    </span>
+  );
+}
+
+function InfoRow({ label, value }) {
+  if (!value || (Array.isArray(value) && !value.length)) return null;
+  return (
+    <div className="flex items-start gap-3 mb-2 text-sm">
+      <span className="text-gray-500 w-36 flex-shrink-0">{label}</span>
+      <span className="text-gray-200 break-words">{value}</span>
+    </div>
+  );
+}
+
+function StructuredResumeViewer({ data }) {
+  if (!data) return null;
+
+  const scoreColor = (s) =>
+    s >= 80 ? 'text-emerald-400' : s >= 60 ? 'text-yellow-400' : 'text-red-400';
+
+  const linkVal = (url) =>
+    url && url !== 'null' && url !== 'None' ? url : null;
+
+  return (
+    <div className="space-y-1">
+      {/* Scores */}
+      <div className="grid grid-cols-2 gap-4 mb-6">
+        {[
+          { label: 'Resume Score', value: data.ResumeScore, suffix: '/100' },
+          { label: 'Career Readiness', value: data.CareerReadinessScore, suffix: '/100' },
+        ].map(({ label, value, suffix }) => (
+          <div key={label} className="bg-gray-900/80 rounded-2xl border border-gray-800 p-5 text-center">
+            <div className={`text-5xl font-extrabold ${scoreColor(value)}`}>{value}<span className="text-lg text-gray-500 font-normal">{suffix}</span></div>
+            <div className="text-xs text-gray-500 mt-2 uppercase tracking-widest">{label}</div>
+          </div>
+        ))}
+      </div>
+
+      {/* Personal Info */}
+      <Section icon={User} title="Personal Information" color="text-sky-400">
+        <InfoRow label="Full Name" value={data.FullName} />
+        <InfoRow label="Career Domain" value={data.CareerDomain} />
+        <InfoRow label="Preferred Roles" value={Array.isArray(data.PreferredRoles) ? data.PreferredRoles.join(', ') : data.PreferredRole} />
+        <InfoRow label="Exp. (Years)" value={data.YearsOfExperience} />
+        <InfoRow label="Location" value={data.Location} />
+      </Section>
+
+      {/* Contact */}
+      <Section icon={Mail} title="Contact Details" color="text-violet-400">
+        <InfoRow label="Email" value={data.EmailAddress} />
+        <InfoRow label="Phone" value={data.PhoneNumber} />
+        {linkVal(data.LinkedInURL) && (
+          <div className="flex items-center gap-2 text-sm mb-2">
+            <span className="text-gray-500 w-36">LinkedIn</span>
+            <a href={data.LinkedInURL} target="_blank" rel="noreferrer" className="text-violet-400 hover:underline flex items-center gap-1">
+              View Profile <ExternalLink size={12} />
+            </a>
+          </div>
+        )}
+        {linkVal(data.GitHubURL) && (
+          <div className="flex items-center gap-2 text-sm mb-2">
+            <span className="text-gray-500 w-36">GitHub</span>
+            <a href={data.GitHubURL} target="_blank" rel="noreferrer" className="text-violet-400 hover:underline flex items-center gap-1">
+              View Profile <ExternalLink size={12} />
+            </a>
+          </div>
+        )}
+        {linkVal(data.PortfolioURL) && (
+          <div className="flex items-center gap-2 text-sm mb-2">
+            <span className="text-gray-500 w-36">Portfolio</span>
+            <a href={data.PortfolioURL} target="_blank" rel="noreferrer" className="text-violet-400 hover:underline flex items-center gap-1">
+              View Portfolio <ExternalLink size={12} />
+            </a>
+          </div>
+        )}
+      </Section>
+
+      {/* Skills */}
+      <Section icon={Code2} title="Technical Skills" color="text-emerald-400">
+        <div className="flex flex-wrap">
+          {(data.TechnicalSkills || data.Skills || []).map((s, i) => (
+            <Chip key={i} text={s} color="bg-emerald-900/40 text-emerald-300 border-emerald-800" />
+          ))}
+        </div>
+      </Section>
+
+      <Section icon={Star} title="Soft Skills" color="text-pink-400">
+        <div className="flex flex-wrap">
+          {(data.SoftSkills || []).map((s, i) => (
+            <Chip key={i} text={s} color="bg-pink-900/40 text-pink-300 border-pink-800" />
+          ))}
+        </div>
+      </Section>
+
+      {(data.Languages || []).length > 0 && (
+        <Section icon={Globe} title="Languages" color="text-cyan-400">
+          <div className="flex flex-wrap">
+            {data.Languages.map((l, i) => (
+              <Chip key={i} text={l} color="bg-cyan-900/40 text-cyan-300 border-cyan-800" />
+            ))}
+          </div>
+        </Section>
+      )}
+
+      {/* Education */}
+      <Section icon={GraduationCap} title="Education" color="text-amber-400">
+        {(data.Education || []).map((edu, i) => (
+          <div key={i} className="mb-4 pl-3 border-l-2 border-amber-700">
+            {typeof edu === 'string' ? (
+              <p className="text-gray-300 text-sm">{edu}</p>
+            ) : (
+              <>
+                <p className="font-semibold text-amber-300">{edu.Degree} — {edu.FieldOfStudy}</p>
+                <p className="text-gray-400 text-sm">{edu.Institution}</p>
+                <p className="text-gray-500 text-xs">{edu.Year} {edu.CGPA ? `• CGPA: ${edu.CGPA}` : ''}</p>
+              </>
+            )}
+          </div>
+        ))}
+      </Section>
+
+      {/* Experience */}
+      {(data.Experience || []).length > 0 && (
+        <Section icon={Briefcase} title="Experience" color="text-blue-400">
+          {data.Experience.map((exp, i) => (
+            <div key={i} className="mb-4 pl-3 border-l-2 border-blue-700">
+              {typeof exp === 'string' ? (
+                <p className="text-gray-300 text-sm">{exp}</p>
+              ) : (
+                <>
+                  <p className="font-semibold text-blue-300">{exp.Title} @ {exp.Company}</p>
+                  <p className="text-gray-500 text-xs mb-1">{exp.Duration}</p>
+                  <p className="text-gray-400 text-sm">{exp.Description}</p>
+                </>
+              )}
+            </div>
+          ))}
+        </Section>
+      )}
+
+      {/* Projects */}
+      {(data.Projects || []).length > 0 && (
+        <Section icon={Terminal} title="Projects" color="text-orange-400">
+          {data.Projects.map((proj, i) => (
+            <div key={i} className="mb-5 rounded-xl bg-gray-900/60 border border-gray-800 p-4">
+              <div className="flex items-center justify-between mb-1">
+                <p className="font-bold text-orange-300">{proj.Title}</p>
+                {proj.Link && proj.Link !== 'null' && (
+                  <a href={proj.Link} target="_blank" rel="noreferrer" className="text-orange-400 text-xs hover:underline flex items-center gap-1">
+                    View <ExternalLink size={11} />
+                  </a>
+                )}
+              </div>
+              <p className="text-gray-400 text-sm mb-2">{proj.Description}</p>
+              <div className="flex flex-wrap">
+                {(proj.TechnologiesUsed || []).map((t, j) => (
+                  <Chip key={j} text={t} color="bg-orange-900/30 text-orange-300 border-orange-800" />
+                ))}
+              </div>
+            </div>
+          ))}
+        </Section>
+      )}
+
+      {/* Certifications */}
+      {(data.Certifications || []).length > 0 && (
+        <Section icon={Award} title="Certifications" color="text-yellow-400">
+          <ul className="list-disc pl-4 space-y-1">
+            {data.Certifications.map((c, i) => <li key={i} className="text-gray-300 text-sm">{c}</li>)}
+          </ul>
+        </Section>
+      )}
+
+      {/* Achievements */}
+      {(data.Achievements || []).length > 0 && (
+        <Section icon={Star} title="Achievements" color="text-rose-400">
+          <ul className="list-disc pl-4 space-y-1">
+            {data.Achievements.map((a, i) => <li key={i} className="text-gray-300 text-sm">{a}</li>)}
+          </ul>
+        </Section>
+      )}
+
+      {/* Research */}
+      {(data.Research || []).length > 0 && (
+        <Section icon={BookMarked} title="Research & Publications" color="text-teal-400">
+          <ul className="list-disc pl-4 space-y-1">
+            {data.Research.map((r, i) => <li key={i} className="text-gray-300 text-sm">{r}</li>)}
+          </ul>
+        </Section>
+      )}
+
+      {/* Interests */}
+      {(data.Interests || []).length > 0 && (
+        <Section icon={Sparkles} title="Interests" color="text-purple-400">
+          <div className="flex flex-wrap">
+            {data.Interests.map((interest, i) => (
+              <Chip key={i} text={interest} color="bg-purple-900/40 text-purple-300 border-purple-800" />
+            ))}
+          </div>
+        </Section>
+      )}
+
+      {/* Strengths & Weaknesses */}
+      {((data.ResumeStrengths || []).length > 0 || (data.ResumeWeaknesses || []).length > 0) && (
+        <Section icon={CheckCircle} title="AI Resume Analysis" color="text-green-400">
+          {(data.ResumeStrengths || []).length > 0 && (
+            <div className="mb-3">
+              <p className="text-green-400 font-semibold text-xs uppercase tracking-widest mb-2">Strengths</p>
+              <ul className="space-y-1">
+                {data.ResumeStrengths.map((s, i) => (
+                  <li key={i} className="flex items-start gap-2 text-gray-300 text-sm">
+                    <CheckCircle size={14} className="text-green-400 mt-0.5 flex-shrink-0" />{s}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+          {(data.ResumeWeaknesses || []).length > 0 && (
+            <div>
+              <p className="text-yellow-400 font-semibold text-xs uppercase tracking-widest mb-2">Areas to Improve</p>
+              <ul className="space-y-1">
+                {data.ResumeWeaknesses.map((w, i) => (
+                  <li key={i} className="flex items-start gap-2 text-gray-300 text-sm">
+                    <AlertCircle size={14} className="text-yellow-400 mt-0.5 flex-shrink-0" />{w}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </Section>
+      )}
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────
+// Main Compare Page
+// ─────────────────────────────────────────────
 export default function Compare() {
   const [jobLink, setJobLink] = useState('');
   const [jobLinkError, setJobLinkError] = useState('');
@@ -17,21 +313,36 @@ export default function Compare() {
   const [isFetchingDetails, setIsFetchingDetails] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const [copied, setCopied] = useState(false);
-  const [fetchError, setFetchError] = useState('');
+  const [jsonView, setJsonView] = useState(false); // toggle between structured / raw JSON
   const navigate = useNavigate();
 
+  const STORAGE_KEY = 'ai_pilot_resume_profile';
+
+  // ── Open the Detailed Resume inspector ──
   const handleViewDetails = async () => {
     setIsFetchingDetails(true);
-    setFetchError('');
     try {
-      const res = await getResumeDetails();
-      setDetailedResume(res.data.data);
-      setShowModal(true);
-    } catch (err) {
-      console.error(err);
-      const errMsg = err.response?.data?.message || err.response?.data?.error || "No extracted resume data found. Please upload a resume first.";
-      setFetchError(errMsg);
-      alert(errMsg);
+      // 1. Try localStorage first (fastest, works after any upload in the same browser session)
+      const cached = localStorage.getItem(STORAGE_KEY);
+      if (cached) {
+        setDetailedResume(JSON.parse(cached));
+        setShowModal(true);
+        return;
+      }
+
+      // 2. Try backend DB (may have data if same Vercel instance)
+      try {
+        const res = await getResumeDetails();
+        const profile = res.data.data;
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(profile));
+        setDetailedResume(profile);
+        setShowModal(true);
+        return;
+      } catch (apiErr) {
+        // DB empty or table missing → tell user to upload
+      }
+
+      alert("No extracted resume data found. Please upload your resume first using the file picker, then click 'Detailed Resume'.");
     } finally {
       setIsFetchingDetails(false);
     }
@@ -44,70 +355,71 @@ export default function Compare() {
     setTimeout(() => setCopied(false), 2000);
   };
 
-  const syntaxHighlight = (json) => {
-    if (!json) return '';
-    if (typeof json !== 'string') {
-      json = JSON.stringify(json, undefined, 2);
-    }
-    json = json.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-    return json.replace(/("(\\u[a-zA-Z0-8]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+-]?\d+)?)/g, function (match) {
-      let cls = 'text-amber-500'; // number
-      if (/^"/.test(match)) {
-        if (/:$/.test(match)) {
-          cls = 'text-blue-400 font-bold'; // key
-        } else {
-          cls = 'text-green-400'; // string
-        }
-      } else if (/true|false/.test(match)) {
-        cls = 'text-purple-400'; // boolean
-      } else if (/null/.test(match)) {
-        cls = 'text-pink-400'; // null
-      }
-      return '<span class="' + cls + '">' + match + '</span>';
-    });
-  };
-
   const validateJobLink = (url) => {
     if (!url || url.trim() === '') return '';
     try {
       const parsed = new URL(url);
-      if (parsed.protocol !== 'https:' && parsed.protocol !== 'http:') {
-        return 'Must be a valid http or https URL';
-      }
-      return '';
-    } catch (e) {
+      return (parsed.protocol !== 'https:' && parsed.protocol !== 'http:')
+        ? 'Must be a valid http or https URL' : '';
+    } catch {
       return 'Please enter a valid URL (e.g., https://...)';
     }
   };
 
   const handleFileChange = (e) => {
-    if (e.target.files && e.target.files[0]) {
-      setResumeFile(e.target.files[0]);
-    }
+    if (e.target.files && e.target.files[0]) setResumeFile(e.target.files[0]);
   };
 
   const handleCompare = async () => {
     if (!resumeFile || !jobLink) return;
     setIsComparing(true);
     setResults(null);
-    
+
     const formData = new FormData();
     formData.append('resume', resumeFile);
     formData.append('jobLink', jobLink);
-    
+
     try {
       const res = await compareResumeToJob(formData);
-      setResults(res.data.data);
+      const data = res.data.data;
+      setResults(data);
+      // Cache the parsed resume profile returned by /compare/match if present
+      if (data?.resume_profile) {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(data.resume_profile));
+      }
     } catch (err) {
-      console.error("Comparison failed:", err);
-      alert("Failed to analyze the fit. Make sure the backend is running.");
+      console.error('Comparison failed:', err);
+      alert('Failed to analyze the fit. Make sure the backend is running.');
     } finally {
       setIsComparing(false);
     }
   };
 
+  // ── Upload file & immediately cache parsed profile ──
+  const handleUploadAndCache = async (file) => {
+    if (!file) return;
+    const fd = new FormData();
+    fd.append('file', file);
+    try {
+      const res = await uploadResume(fd);
+      if (res.data?.data) {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(res.data.data));
+      }
+    } catch (err) {
+      console.warn('Background upload failed; profile will be extracted on Compare:', err);
+    }
+  };
+
+  const onFileChange = (e) => {
+    if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0];
+      setResumeFile(file);
+      handleUploadAndCache(file); // silently cache profile
+    }
+  };
+
   return (
-    <motion.div 
+    <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       className="p-8 text-white max-w-6xl mx-auto"
@@ -118,52 +430,48 @@ export default function Compare() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-10">
-        
-        {/* Resume Grid Column */}
-        <div className="bg-[#1e2128] border border-gray-800 rounded-2xl p-8 flex flex-col items-center justify-center text-center transition-all hover:border-blue-500 relative">
+        {/* Resume Column */}
+        <div className="bg-[#1e2128] border border-gray-800 rounded-2xl p-8 flex flex-col items-center justify-center text-center transition-all hover:border-blue-500">
           <div className="w-16 h-16 bg-blue-500/20 rounded-full flex items-center justify-center mb-4">
             <FileText className="text-blue-400" size={32} />
           </div>
           <h2 className="text-2xl font-bold text-white mb-2">Your Resume</h2>
           <p className="text-gray-400 mb-6 text-sm">Upload your latest PDF or DOCX resume.</p>
-          
-          <div className="flex w-full space-x-4">
-            <label className="cursor-pointer flex-1 border-2 border-dashed border-gray-600 rounded-xl p-8 hover:bg-gray-800 transition-colors flex flex-col items-center">
-              <UploadCloud size={32} className="text-gray-400 mb-3" />
-              <span className="text-blue-400 font-semibold">{resumeFile ? resumeFile.name : 'Browse or Drag File'}</span>
-              <input type="file" className="hidden" accept=".pdf,.doc,.docx" onChange={handleFileChange} />
-            </label>
-          </div>
+          <label className="cursor-pointer w-full border-2 border-dashed border-gray-600 rounded-xl p-8 hover:bg-gray-800 transition-colors flex flex-col items-center">
+            <UploadCloud size={32} className="text-gray-400 mb-3" />
+            <span className="text-blue-400 font-semibold">{resumeFile ? resumeFile.name : 'Browse or Drag File'}</span>
+            <input type="file" className="hidden" accept=".pdf,.doc,.docx" onChange={onFileChange} />
+          </label>
+          {resumeFile && (
+            <p className="mt-3 text-xs text-green-400 flex items-center gap-1">
+              <CheckCircle size={12} /> Profile cached — Detailed Resume ready
+            </p>
+          )}
         </div>
 
-        {/* Job Link Grid Column */}
-        <div className="bg-[#1e2128] border border-gray-800 rounded-2xl p-8 flex flex-col items-center justify-center text-center transition-all hover:border-purple-500 relative">
+        {/* Job Link Column */}
+        <div className="bg-[#1e2128] border border-gray-800 rounded-2xl p-8 flex flex-col items-center justify-center text-center transition-all hover:border-purple-500">
           <div className="w-16 h-16 bg-purple-500/20 rounded-full flex items-center justify-center mb-4">
             <LinkIcon className="text-purple-400" size={32} />
           </div>
           <h2 className="text-2xl font-bold text-white mb-2">Job Link</h2>
           <p className="text-gray-400 mb-6 text-sm">Paste the URL of the job you want to apply for.</p>
-          
-          <div className="w-full flex-1 flex flex-col justify-center">
-            <input 
-              type="url" 
-              placeholder="e.g., https://linkedin.com/jobs/..." 
+          <div className="w-full">
+            <input
+              type="url"
+              placeholder="e.g., https://linkedin.com/jobs/..."
               value={jobLink}
-              onChange={(e) => {
-                const val = e.target.value;
-                setJobLink(val);
-                setJobLinkError(validateJobLink(val));
-              }}
-              className={`w-full bg-gray-900 border ${jobLinkError ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : 'border-gray-700 focus:border-purple-500 focus:ring-purple-500'} rounded-xl p-4 text-white focus:outline-none focus:ring-1 transition-all text-center mb-1`}
+              onChange={(e) => { setJobLink(e.target.value); setJobLinkError(validateJobLink(e.target.value)); }}
+              className={`w-full bg-gray-900 border ${jobLinkError ? 'border-red-500' : 'border-gray-700 focus:border-purple-500'} rounded-xl p-4 text-white focus:outline-none focus:ring-1 focus:ring-purple-500 transition-all text-center`}
             />
-            {jobLinkError && <span className="text-red-400 text-xs mt-2">{jobLinkError}</span>}
+            {jobLinkError && <span className="text-red-400 text-xs mt-2 block">{jobLinkError}</span>}
           </div>
         </div>
-
       </div>
 
-      <div className="flex justify-center items-center space-x-4">
-        <button 
+      {/* Action Buttons */}
+      <div className="flex justify-center items-center flex-wrap gap-4">
+        <button
           onClick={handleCompare}
           disabled={!resumeFile || !jobLink || !!jobLinkError || isComparing}
           className="flex items-center space-x-3 px-12 py-4 bg-gradient-to-r from-blue-600 to-purple-600 text-white font-bold text-xl rounded-full shadow-lg disabled:opacity-50 disabled:cursor-not-allowed hover:scale-105 transition-transform"
@@ -173,11 +481,11 @@ export default function Compare() {
         </button>
 
         {SHOW_DEV_FEATURES && (
-          <button 
+          <button
             onClick={handleViewDetails}
             disabled={isFetchingDetails}
-            className="flex items-center space-x-2 px-8 py-4 bg-gray-800 hover:bg-gray-700 text-white font-semibold text-lg rounded-full border border-gray-700 hover:scale-105 transition-transform shadow-md"
-            title="Inspect raw extracted JSON data stored in backend"
+            className="flex items-center space-x-2 px-8 py-4 bg-gray-800 hover:bg-gray-700 text-white font-semibold text-lg rounded-full border border-gray-600 hover:scale-105 transition-transform shadow-md"
+            title="View AI-extracted resume profile (dev tool)"
           >
             {isFetchingDetails ? <Loader2 size={20} className="animate-spin" /> : <Eye size={20} />}
             <span>Detailed Resume</span>
@@ -185,68 +493,58 @@ export default function Compare() {
         )}
       </div>
 
+      {/* ── Match Results ── */}
       {results && (
-        <motion.div 
+        <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           className="mt-16 bg-[#1e2128] border border-gray-800 rounded-3xl p-10 shadow-2xl relative overflow-hidden"
         >
-          <div className="absolute top-0 left-0 w-2 bg-gradient-to-b from-blue-500 to-purple-500 h-full"></div>
-          
+          <div className="absolute top-0 left-0 w-2 bg-gradient-to-b from-blue-500 to-purple-500 h-full" />
+
           <div className="flex flex-col md:flex-row items-center justify-between border-b border-gray-800 pb-8 mb-8">
             <div>
               <h2 className="text-3xl font-bold mb-2">AI Match Report</h2>
               <p className="text-gray-400">Here's how your resume stacks up against the job.</p>
             </div>
             <div className="mt-6 md:mt-0 flex space-x-8">
-              <div className="flex flex-col items-center">
-                <div className="text-4xl font-extrabold text-blue-400">{results.resume_score}</div>
-                <span className="text-xs text-gray-500 uppercase tracking-widest mt-1">Resume Score</span>
-              </div>
-              <div className="flex flex-col items-center">
-                <div className="text-4xl font-extrabold text-pink-400">{results.career_readiness}</div>
-                <span className="text-xs text-gray-500 uppercase tracking-widest mt-1">Career Readiness</span>
-              </div>
-              <div className="flex flex-col items-center">
-                <div className="text-4xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-purple-400">
-                  {results.match_score}%
+              {[
+                { val: results.resume_score, label: 'Resume Score', color: 'text-blue-400' },
+                { val: results.career_readiness, label: 'Career Readiness', color: 'text-pink-400' },
+                { val: `${results.match_score}%`, label: 'Match Score', color: 'text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-purple-400' },
+              ].map(({ val, label, color }) => (
+                <div key={label} className="flex flex-col items-center">
+                  <div className={`text-4xl font-extrabold ${color}`}>{val}</div>
+                  <span className="text-xs text-gray-500 uppercase tracking-widest mt-1">{label}</span>
                 </div>
-                <span className="text-xs text-gray-500 uppercase tracking-widest mt-1">Match Score</span>
-              </div>
+              ))}
             </div>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
-            {/* Matched Skills */}
             <div>
-              <h3 className="text-xl font-semibold mb-5 flex items-center text-green-400">
-                <CheckCircle className="mr-2" /> Matched Skills
-              </h3>
-              <ul className="space-y-4">
+              <h3 className="text-xl font-semibold mb-5 flex items-center text-green-400"><CheckCircle className="mr-2" /> Matched Skills</h3>
+              <ul className="space-y-3">
                 {results.matched_skills?.map((skill, idx) => (
                   <li key={idx} className="flex items-start bg-gray-900/50 p-4 rounded-xl border border-gray-800">
                     <CheckCircle size={20} className="text-green-500 mr-3 flex-shrink-0 mt-0.5" />
-                    <span className="text-gray-300 leading-relaxed">{skill}</span>
+                    <span className="text-gray-300">{skill}</span>
                   </li>
                 ))}
               </ul>
             </div>
-
-            {/* Missing Skills */}
             <div>
-              <h3 className="text-xl font-semibold mb-5 flex items-center text-yellow-400">
-                <AlertCircle className="mr-2" /> Missing Skills
-              </h3>
-              <ul className="space-y-4 mb-6">
+              <h3 className="text-xl font-semibold mb-5 flex items-center text-yellow-400"><AlertCircle className="mr-2" /> Missing Skills</h3>
+              <ul className="space-y-3 mb-6">
                 {results.missing_skills?.map((skill, idx) => (
                   <li key={idx} className="flex items-start bg-gray-900/50 p-4 rounded-xl border border-gray-800">
                     <XCircle size={20} className="text-yellow-500 mr-3 flex-shrink-0 mt-0.5" />
-                    <span className="text-gray-300 leading-relaxed">{skill}</span>
+                    <span className="text-gray-300">{skill}</span>
                   </li>
                 ))}
               </ul>
-              {results.missing_skills && results.missing_skills.length > 0 && (
-                <button 
+              {results.missing_skills?.length > 0 && (
+                <button
                   onClick={() => navigate('/roadmap', { state: { missingSkills: results.missing_skills } })}
                   className="w-full py-3 bg-yellow-500/10 text-yellow-500 border border-yellow-500/30 hover:bg-yellow-500/20 rounded-xl flex items-center justify-center font-semibold transition-all"
                 >
@@ -256,42 +554,28 @@ export default function Compare() {
             </div>
           </div>
 
-          {/* Improvements & Courses Grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-10 mt-10">
             <div>
-              <h3 className="text-xl font-semibold mb-5 flex items-center text-blue-400">
-                <Lightbulb className="mr-2" /> Resume Improvements
-              </h3>
+              <h3 className="text-xl font-semibold mb-5 flex items-center text-blue-400"><Lightbulb className="mr-2" /> Resume Improvements</h3>
               <ul className="space-y-3">
                 {results.resume_improvements?.map((item, idx) => (
-                  <li key={idx} className="flex items-start text-gray-300">
-                    <span className="text-blue-500 mr-2">•</span> {item}
-                  </li>
+                  <li key={idx} className="flex items-start text-gray-300"><span className="text-blue-500 mr-2">•</span>{item}</li>
                 ))}
               </ul>
             </div>
-            
             <div>
-              <h3 className="text-xl font-semibold mb-5 flex items-center text-pink-400">
-                <BookOpen className="mr-2" /> Recommended Courses
-              </h3>
+              <h3 className="text-xl font-semibold mb-5 flex items-center text-pink-400"><BookOpen className="mr-2" /> Recommended Courses</h3>
               <ul className="space-y-3">
                 {results.recommended_courses?.map((course, idx) => (
-                  <li key={idx} className="flex items-start text-gray-300">
-                    <span className="text-pink-500 mr-2">•</span> {course}
-                  </li>
+                  <li key={idx} className="flex items-start text-gray-300"><span className="text-pink-500 mr-2">•</span>{course}</li>
                 ))}
               </ul>
             </div>
           </div>
 
-          {/* AI Recommendation Verdict */}
           <div className="mt-12 bg-gray-900/80 p-8 rounded-2xl border border-gray-700 flex flex-col items-center text-center">
             <h3 className="text-lg font-bold text-gray-400 mb-2 uppercase tracking-widest">Should you apply?</h3>
-            <div className={`text-4xl font-extrabold mb-4 ${
-              results.should_apply === 'YES' ? 'text-green-400' : 
-              results.should_apply === 'MAYBE' ? 'text-yellow-400' : 'text-red-400'
-            }`}>
+            <div className={`text-4xl font-extrabold mb-4 ${results.should_apply === 'YES' ? 'text-green-400' : results.should_apply === 'MAYBE' ? 'text-yellow-400' : 'text-red-400'}`}>
               {results.should_apply}
             </div>
             <p className="text-gray-300 leading-relaxed max-w-3xl">{results.reason}</p>
@@ -299,62 +583,93 @@ export default function Compare() {
         </motion.div>
       )}
 
-      {/* Detailed Resume Modal (Developer JSON Viewer Panel) */}
-      {showModal && SHOW_DEV_FEATURES && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
-          <motion.div 
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            className="bg-[#1e2128] border border-gray-700 rounded-3xl p-6 w-full max-w-4xl max-h-[85vh] flex flex-col shadow-2xl relative"
+      {/* ── Developer Resume Viewer Modal ── */}
+      <AnimatePresence>
+        {showModal && SHOW_DEV_FEATURES && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4"
           >
-            {/* Header */}
-            <div className="flex items-center justify-between border-b border-gray-800 pb-4 mb-4">
-              <h2 className="text-2xl font-bold text-white flex items-center">
-                <Eye className="mr-3 text-blue-400" /> Raw AI-Extracted Profile JSON
-              </h2>
-              <div className="flex items-center space-x-3">
-                <button 
-                  onClick={handleCopy}
-                  className="flex items-center space-x-1.5 px-3 py-1.5 bg-gray-850 border border-gray-700 rounded-lg text-xs font-semibold text-gray-300 hover:text-white hover:bg-gray-800 transition-colors"
-                >
-                  {copied ? <Check size={14} className="text-green-400" /> : <Copy size={14} />}
-                  <span>{copied ? 'Copied' : 'Copy JSON'}</span>
-                </button>
-                <button 
+            <motion.div
+              initial={{ opacity: 0, scale: 0.93, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.93 }}
+              className="bg-[#13151c] border border-gray-700/80 rounded-3xl w-full max-w-4xl max-h-[90vh] flex flex-col shadow-2xl"
+            >
+              {/* Modal Header */}
+              <div className="flex items-center justify-between px-6 py-5 border-b border-gray-800">
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-xl bg-blue-600/20 flex items-center justify-center">
+                    <Eye size={18} className="text-blue-400" />
+                  </div>
+                  <div>
+                    <h2 className="text-lg font-bold text-white">AI-Extracted Resume Profile</h2>
+                    <p className="text-xs text-gray-500">Dev Tools · Exact data from your uploaded resume</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  {/* Structured / Raw toggle */}
+                  <button
+                    onClick={() => setJsonView(v => !v)}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-gray-700 text-xs font-semibold text-gray-300 hover:text-white hover:bg-gray-800 transition-colors"
+                  >
+                    <Terminal size={13} />
+                    {jsonView ? 'Structured View' : 'Raw JSON'}
+                  </button>
+                  <button
+                    onClick={handleCopy}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-gray-700 text-xs font-semibold text-gray-300 hover:text-white hover:bg-gray-800 transition-colors"
+                  >
+                    {copied ? <Check size={13} className="text-green-400" /> : <Copy size={13} />}
+                    {copied ? 'Copied!' : 'Copy JSON'}
+                  </button>
+                  <button
+                    onClick={() => setShowModal(false)}
+                    className="p-2 rounded-lg border border-gray-700 text-gray-400 hover:text-white hover:bg-gray-800 transition-colors"
+                  >
+                    <X size={18} />
+                  </button>
+                </div>
+              </div>
+
+              {/* Modal Body */}
+              <div className="flex-1 overflow-auto px-6 py-5">
+                {!detailedResume ? (
+                  <div className="flex flex-col items-center justify-center h-48 text-gray-500">
+                    <AlertCircle size={36} className="mb-3 text-yellow-500" />
+                    <p className="font-semibold">No extracted resume data found.</p>
+                    <p className="text-sm mt-1">Please upload a resume first.</p>
+                  </div>
+                ) : jsonView ? (
+                  /* Raw JSON view */
+                  <div className="bg-gray-950 rounded-2xl border border-gray-800 p-5 overflow-auto">
+                    <pre
+                      className="text-sm font-mono whitespace-pre-wrap break-words leading-6"
+                      dangerouslySetInnerHTML={{ __html: syntaxHighlight(detailedResume) }}
+                    />
+                  </div>
+                ) : (
+                  /* Structured card view */
+                  <StructuredResumeViewer data={detailedResume} />
+                )}
+              </div>
+
+              {/* Modal Footer */}
+              <div className="px-6 py-4 border-t border-gray-800 flex items-center justify-between">
+                <span className="text-xs text-gray-600">⚠ DEV TOOLS · Hidden in production (SHOW_DEV_FEATURES = false)</span>
+                <button
                   onClick={() => setShowModal(false)}
-                  className="text-gray-400 hover:text-white transition-colors p-1 bg-gray-850 hover:bg-gray-800 rounded-lg border border-gray-700"
+                  className="px-5 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:opacity-90 rounded-xl text-sm font-semibold text-white transition"
                 >
-                  <X size={20} />
+                  Close Inspector
                 </button>
               </div>
-            </div>
-
-            <p className="text-gray-400 text-xs mb-4">
-              This panel displays the exact JSON candidate profile stored in SQLite. Color guide: <span className="text-blue-400 font-bold">keys</span>, <span className="text-green-400">strings</span>, <span className="text-purple-400">booleans</span>, <span className="text-amber-500">numbers</span>.
-            </p>
-            
-            {/* JSON Content Area */}
-            <div className="bg-gray-950 rounded-xl p-5 overflow-auto flex-1 border border-gray-900 scrollbar-thin">
-              <pre 
-                className="text-sm font-mono whitespace-pre-wrap break-words leading-relaxed"
-                dangerouslySetInnerHTML={{ __html: syntaxHighlight(detailedResume) }}
-              />
-            </div>
-            
-            {/* Footer */}
-            <div className="border-t border-gray-800 pt-4 mt-4 flex justify-between items-center">
-              <span className="text-xs text-gray-500">DEV TOOLS ONLY - Hidden in production</span>
-              <button 
-                onClick={() => setShowModal(false)}
-                className="px-5 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 rounded-lg text-sm font-semibold text-white transition-colors"
-              >
-                Close Inspector
-              </button>
-            </div>
+            </motion.div>
           </motion.div>
-        </div>
-      )}
-
+        )}
+      </AnimatePresence>
     </motion.div>
   );
 }
