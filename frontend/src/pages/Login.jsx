@@ -6,8 +6,8 @@ import { motion } from 'framer-motion';
 import { LogIn, Compass, Mail, Lock } from 'lucide-react';
 
 export default function Login() {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const [email, setEmail] = useState('admin@pathpilot.com');
+  const [password, setPassword] = useState('admin123');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
