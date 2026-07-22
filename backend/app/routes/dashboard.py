@@ -1,5 +1,7 @@
 from flask import Blueprint, jsonify, request
 from app.services.profile_scanner import profile_scanner
+from app.models.resume import Resume
+from app.extensions import db
 
 bp = Blueprint('dashboard', __name__)
 
@@ -35,7 +37,23 @@ def update_links():
 @bp.route('/scan', methods=['POST'])
 def scan_profiles():
     profile_scores = profile_scanner.scan_profiles(user_links)
-    recommendations = profile_scanner.generate_recommendations(user_links, profile_scores)
+    
+    # Fetch Resume from DB (user_id = 1 for demo)
+    user_id = 1
+    resume_record = Resume.query.filter_by(user_id=user_id).first()
+    
+    bio = ""
+    skills = []
+    
+    if resume_record and resume_record.parsed_json:
+        parsed_json = resume_record.parsed_json
+        bio = parsed_json.get("CareerObjective", "")
+        # Try to pull from TechnicalSkills, fallback to empty list
+        skills = parsed_json.get("TechnicalSkills", [])
+        if not isinstance(skills, list):
+            skills = []
+            
+    recommendations = profile_scanner.generate_recommendations(bio, skills)
     
     return jsonify({
         "scores": profile_scores,

@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { getLinks, updateLinks, scanProfile, uploadResume } from '../services/api';
-import { FileText, Globe, Briefcase, Terminal, Cpu, Loader2, Sparkles, GraduationCap, Code, BookOpen, ChevronRight } from 'lucide-react';
+import { FileText, Globe, Briefcase, Terminal, Cpu, Loader2, Sparkles, GraduationCap, Code, BookOpen, ChevronRight, CheckCircle, XCircle } from 'lucide-react';
 
 export default function Dashboard() {
   const [links, setLinks] = useState({
@@ -250,9 +250,56 @@ export default function Dashboard() {
           animate={{ opacity: 1, y: 0 }}
           className="mt-16"
         >
-          <div className="mb-8 flex items-center space-x-3">
-            <Sparkles className="text-primary" size={28} />
-            <h2 className="text-2xl font-bold">AI Personalized Recommendations</h2>
+          <div className="mb-8 flex items-center justify-between">
+            <div className="flex items-center space-x-3">
+              <Sparkles className="text-primary" size={28} />
+              <h2 className="text-2xl font-bold">AI Personalized Recommendations</h2>
+            </div>
+            {scanResults.recommendations.career_score !== undefined && (
+              <div className="bg-gray-800 border border-gray-700 px-4 py-2 rounded-full flex items-center space-x-2">
+                <span className="text-gray-400 text-sm">Career Score:</span>
+                <span className="text-white font-bold">{scanResults.recommendations.career_score}/100</span>
+              </div>
+            )}
+          </div>
+
+          {/* Skills Badges */}
+          <div className="mb-10 grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="bg-[#1e2128]/50 p-6 rounded-2xl border border-green-500/20">
+              <div className="flex items-center space-x-2 mb-4 text-green-400">
+                <CheckCircle size={20} />
+                <h3 className="font-bold">Detected Skills</h3>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {scanResults.recommendations.detected_skills?.length > 0 ? (
+                  scanResults.recommendations.detected_skills.map((skill, idx) => (
+                    <span key={idx} className="bg-green-500/10 text-green-400 border border-green-500/20 px-3 py-1 rounded-full text-xs font-semibold">
+                      {skill}
+                    </span>
+                  ))
+                ) : (
+                  <span className="text-gray-500 text-sm">No specific skills detected.</span>
+                )}
+              </div>
+            </div>
+
+            <div className="bg-[#1e2128]/50 p-6 rounded-2xl border border-red-500/20">
+              <div className="flex items-center space-x-2 mb-4 text-red-400">
+                <XCircle size={20} />
+                <h3 className="font-bold">Missing Core Skills</h3>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {scanResults.recommendations.missing_skills?.length > 0 ? (
+                  scanResults.recommendations.missing_skills.map((skill, idx) => (
+                    <span key={idx} className="bg-red-500/10 text-red-400 border border-red-500/20 px-3 py-1 rounded-full text-xs font-semibold">
+                      {skill}
+                    </span>
+                  ))
+                ) : (
+                  <span className="text-gray-500 text-sm">You have all core skills!</span>
+                )}
+              </div>
+            </div>
           </div>
           
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">

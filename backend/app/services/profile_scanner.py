@@ -22,41 +22,115 @@ class ProfileScanner:
                 
         return results
 
-    def generate_recommendations(self, links: dict, profile_scores: dict) -> dict:
-        prompt = f"""
-        Act as an expert AI career advisor for software engineering.
-        The user has provided the following profile links/identifiers:
-        {json.dumps(links, indent=2)}
-        
-        We have simulated an analysis of their profiles with the following scores (out of 100):
-        {json.dumps(profile_scores, indent=2)}
-        
-        Based on this combined profile strength and implied skills, generate 3-5 specific, personalized recommendations for each of these categories:
-        1. Jobs: Specific job titles or roles they should search for on LinkedIn.
-        2. Internships: Types of internships or entry-level programs they should search for on LinkedIn.
-        3. Hackathons: Themes or specific well-known hackathons they should participate in, particularly those found on Unstop.
-        4. Workshops: Specific technical skills to learn or workshops to attend, like those on Unstop.
-        5. LeetCode Problems: Specific problem types, algorithms, or classic problem names they should practice on LeetCode.
-        
-        Return ONLY a JSON object exactly matching this schema without any markdown formatting:
-        {{
-            "jobs": ["Frontend Developer (LinkedIn)", "React Engineer (LinkedIn)"],
-            "internships": ["SWE Intern (LinkedIn)", "Web Dev Intern (LinkedIn)"],
-            "hackathons": ["Smart India Hackathon (Unstop)", "Global Hack Week (Unstop)"],
-            "workshops": ["System Design Workshop (Unstop)", "React Bootcamp (Unstop)"],
-            "leetcode_problems": ["Two Sum", "Merge Intervals"]
-        }}
-        """
-        
-        ai_resp = gemini_service.generate_content(prompt)
-        parsed = self._parse_json(ai_resp, default={})
-        
+    def generate_recommendations(self, bio: str, skills: list) -> dict:
+        bio = bio.lower()
+        skills = [s.lower() for s in skills]
+
+        detected_skills = set(skills)
+
+        keywords = {
+            "python": "Python",
+            "java": "Java",
+            "machine learning": "Machine Learning",
+            "deep learning": "Deep Learning",
+            "data science": "Data Science",
+            "sql": "SQL",
+            "react": "React",
+            "node": "Node.js",
+            "docker": "Docker",
+            "aws": "AWS",
+            "git": "Git"
+        }
+
+        for key, value in keywords.items():
+            if key in bio:
+                detected_skills.add(value)
+
+        jobs = []
+        internships = []
+        workshops = []
+        hackathons = []
+        leetcode = []
+
+        if "python" in str(detected_skills).lower():
+            jobs.extend([
+                "Python Developer",
+                "Backend Developer",
+                "AI Engineer"
+            ])
+
+            internships.extend([
+                "Python Internship",
+                "Backend Internship"
+            ])
+
+            leetcode.extend([
+                "Two Sum",
+                "Valid Parentheses",
+                "Binary Search",
+                "Merge Intervals"
+            ])
+
+        if "machine learning" in str(detected_skills).lower():
+            jobs.extend([
+                "ML Engineer",
+                "Data Scientist"
+            ])
+
+            internships.extend([
+                "Machine Learning Intern"
+            ])
+
+            workshops.extend([
+                "MLOps Workshop",
+                "Deep Learning Bootcamp"
+            ])
+
+            hackathons.extend([
+                "AI Hackathon",
+                "Data Science Challenge"
+            ])
+
+            leetcode.extend([
+                "Kth Largest Element",
+                "Top K Frequent Elements",
+                "Number of Islands",
+                "Word Ladder"
+            ])
+
+        missing_skills = []
+
+        for skill in [
+            "Docker",
+            "AWS",
+            "Git",
+            "SQL"
+        ]:
+            if skill.lower() not in str(detected_skills).lower():
+                missing_skills.append(skill)
+
+        career_score = min(
+            100,
+            len(detected_skills) * 10
+        )
+
+        # Generate fallback recommendations if nothing matches
+        if not jobs:
+            jobs = ["Software Engineer", "Full Stack Developer"]
+            internships = ["Software Engineering Intern"]
+            workshops = ["System Design Basics", "Advanced React Patterns"]
+            hackathons = ["Smart India Hackathon", "Global Hack Week"]
+            leetcode = ["Two Sum", "Merge Intervals", "LRU Cache"]
+
         return {
-            "jobs": parsed.get("jobs", ["Software Engineer (LinkedIn)", "Full Stack Developer (LinkedIn)", "Backend Developer (LinkedIn)"]),
-            "internships": parsed.get("internships", ["Software Engineering Intern (LinkedIn)", "Backend Intern (LinkedIn)"]),
-            "hackathons": parsed.get("hackathons", ["Smart India Hackathon (Unstop)", "Global Hack Week (Unstop)"]),
-            "workshops": parsed.get("workshops", ["System Design Basics (Unstop)", "Advanced React Patterns (Unstop)"]),
-            "leetcode_problems": parsed.get("leetcode_problems", ["Two Sum", "Merge Intervals", "LRU Cache"])
+            "career_score": career_score,
+            "detected_skills": list(detected_skills),
+            "missing_skills": missing_skills,
+            "jobs": list(set(jobs)),
+            "internships": list(set(internships)),
+            "workshops": list(set(workshops)),
+            "hackathons": list(set(hackathons)),
+            "leetcode_problems": list(set(leetcode))
         }
 
     def _is_valid_link(self, platform: str, value: str) -> bool:
