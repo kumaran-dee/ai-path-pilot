@@ -1,6 +1,8 @@
 import json
 import urllib.request
-from app.services.gemini_service import gemini_service
+
+# NOTE: No Gemini calls in this file! The /dashboard/scan endpoint must complete
+# in under 5 seconds to avoid Vercel's 10-second serverless timeout.
 
 class ProfileScanner:
     def scan_profiles(self, links: dict) -> dict:
@@ -23,49 +25,111 @@ class ProfileScanner:
         return results
 
     def generate_recommendations(self, bio: str, skills: list) -> dict:
-        bio = (bio or "").lower()
-        skills = [s.lower() for s in (skills or [])]
-
-        prompt = f"""
-        Act as an expert AI career advisor. 
-        The user has the following background based on their resume:
-        Bio: {bio}
-        Technical Skills: {', '.join(skills)}
-        
-        Based on these skills and background, generate exactly 3-5 personalized recommendations for each category:
-        1. Jobs: Specific job titles they should search for.
-        2. Internships: Types of internships.
-        3. Hackathons: Specific hackathon themes or names.
-        4. Workshops: Specific technical skills to learn or workshops.
-        5. LeetCode Problems: Specific algorithmic problem types or classic problems to practice.
-        
-        Also identify 2-4 critical 'missing_skills' they should learn next, and estimate a 'career_score' (0-100) based on their current skill depth.
-        
-        Return ONLY a JSON object matching this schema exactly:
-        {{
-            "career_score": 75,
-            "detected_skills": {json.dumps(skills)},
-            "missing_skills": ["Docker", "AWS"],
-            "jobs": ["Frontend Developer", "React Engineer"],
-            "internships": ["SWE Intern", "Web Dev Intern"],
-            "workshops": ["System Design Basics", "Advanced React"],
-            "hackathons": ["Smart India Hackathon", "Global Hack Week"],
-            "leetcode_problems": ["Two Sum", "Merge Intervals"]
-        }}
         """
-        
-        ai_resp = gemini_service.generate_content(prompt)
-        parsed = self._parse_json(ai_resp, default={})
-        
+        Fast, pure-Python keyword algorithm.
+        No AI calls to avoid Vercel 10-second serverless timeout.
+        """
+        bio = (bio or "").lower()
+        skills_lower = [s.lower() for s in (skills or [])]
+        skills_display = [s for s in (skills or [])]
+
+        detected_skills = set(skills_display)
+
+        # Map keywords found in bio to display skill names
+        keywords = {
+            "python": "Python",
+            "java": "Java",
+            "javascript": "JavaScript",
+            "typescript": "TypeScript",
+            "machine learning": "Machine Learning",
+            "deep learning": "Deep Learning",
+            "data science": "Data Science",
+            "sql": "SQL",
+            "react": "React",
+            "node": "Node.js",
+            "django": "Django",
+            "flask": "Flask",
+            "docker": "Docker",
+            "aws": "AWS",
+            "kubernetes": "Kubernetes",
+            "git": "Git",
+            "mongodb": "MongoDB",
+            "postgresql": "PostgreSQL",
+            "linux": "Linux",
+            "tensorflow": "TensorFlow",
+            "pytorch": "PyTorch",
+        }
+
+        # Detect skills from bio text
+        full_text = bio + " " + " ".join(skills_lower)
+        for key, value in keywords.items():
+            if key in full_text:
+                detected_skills.add(value)
+
+        # Build recommendations based on detected skills
+        jobs = []
+        internships = []
+        workshops = []
+        hackathons = []
+        leetcode = []
+        missing_skills = []
+
+        detected_lower = {s.lower() for s in detected_skills}
+
+        if "python" in detected_lower:
+            jobs.extend(["Python Developer", "Backend Developer", "AI Engineer"])
+            internships.extend(["Python Backend Intern", "Data Engineering Intern"])
+            leetcode.extend(["Two Sum", "Valid Parentheses", "Binary Search", "Merge Intervals"])
+
+        if "machine learning" in detected_lower or "tensorflow" in detected_lower or "pytorch" in detected_lower:
+            jobs.extend(["ML Engineer", "Data Scientist", "AI Research Engineer"])
+            internships.extend(["Machine Learning Intern", "Data Science Intern"])
+            workshops.extend(["MLOps Workshop", "Deep Learning Bootcamp"])
+            hackathons.extend(["AI Hackathon", "Data Science Challenge"])
+            leetcode.extend(["Kth Largest Element", "Top K Frequent Elements", "Number of Islands"])
+
+        if "react" in detected_lower or "javascript" in detected_lower or "typescript" in detected_lower:
+            jobs.extend(["Frontend Developer", "React Developer", "Full Stack Developer"])
+            internships.extend(["Frontend Dev Intern", "React Intern"])
+            workshops.extend(["Advanced React Patterns", "Next.js Bootcamp"])
+            hackathons.extend(["Build With AI Hackathon", "Global Hack Week"])
+            leetcode.extend(["Valid Parentheses", "LRU Cache", "Design Hit Counter"])
+
+        if "sql" in detected_lower or "postgresql" in detected_lower or "mongodb" in detected_lower:
+            jobs.extend(["Database Engineer", "Backend Developer"])
+            leetcode.extend(["Department Top Three Salaries", "Rank Scores"])
+
+        if "java" in detected_lower:
+            jobs.extend(["Java Developer", "Spring Boot Engineer"])
+            internships.extend(["Java Backend Intern"])
+            leetcode.extend(["Word Search", "Course Schedule"])
+
+        # Detect missing critical skills
+        critical_skills = ["Docker", "AWS", "Git", "SQL", "Linux"]
+        for skill in critical_skills:
+            if skill.lower() not in detected_lower:
+                missing_skills.append(skill)
+
+        # Calculate career score based on breadth of skills
+        career_score = min(100, len(detected_skills) * 8)
+
+        # Fallback defaults when no skills detected at all
+        if not jobs:
+            jobs = ["Software Engineer", "Full Stack Developer", "Junior Developer"]
+            internships = ["Software Engineering Intern", "Web Dev Intern"]
+            workshops = ["System Design Basics", "Clean Code Principles"]
+            hackathons = ["Smart India Hackathon", "Global Hack Week"]
+            leetcode = ["Two Sum", "Merge Intervals", "LRU Cache"]
+
         return {
-            "career_score": parsed.get("career_score", 70),
-            "detected_skills": parsed.get("detected_skills", skills),
-            "missing_skills": parsed.get("missing_skills", ["Docker", "AWS", "System Design"]),
-            "jobs": parsed.get("jobs", ["Software Engineer", "Full Stack Developer", "Backend Developer"]),
-            "internships": parsed.get("internships", ["Software Engineering Intern", "Backend Intern"]),
-            "workshops": parsed.get("workshops", ["System Design Basics", "Advanced React Patterns"]),
-            "hackathons": parsed.get("hackathons", ["Smart India Hackathon", "Global Hack Week"]),
-            "leetcode_problems": parsed.get("leetcode_problems", ["Two Sum", "Merge Intervals", "LRU Cache"])
+            "career_score": career_score,
+            "detected_skills": sorted(list(detected_skills)),
+            "missing_skills": missing_skills,
+            "jobs": list(dict.fromkeys(jobs))[:5],           # unique, preserve order
+            "internships": list(dict.fromkeys(internships))[:4],
+            "workshops": list(dict.fromkeys(workshops))[:4],
+            "hackathons": list(dict.fromkeys(hackathons))[:4],
+            "leetcode_problems": list(dict.fromkeys(leetcode))[:5]
         }
 
     def _is_valid_link(self, platform: str, value: str) -> bool:
@@ -79,13 +143,10 @@ class ProfileScanner:
         if not value.startswith("http://") and not value.startswith("https://"):
             return False
             
-        # Trust frontend validation to avoid Vercel 10-second serverless timeout
-        # Avoid making slow synchronous HTTP requests for every link
+        # Trust the frontend validation — no HTTP pings to avoid Vercel timeout
         return True
 
-        
     def _scan_github(self, url_or_username: str) -> dict:
-        # Extract username
         username = url_or_username
         if "github.com/" in url_or_username:
             username = url_or_username.split("github.com/")[-1].strip("/")
@@ -97,44 +158,35 @@ class ProfileScanner:
             )
             with urllib.request.urlopen(req, timeout=3) as response:
                 data = json.loads(response.read().decode())
-                
                 name = data.get("name") or data.get("login") or "Unknown"
                 public_repos = data.get("public_repos", 0)
                 followers = data.get("followers", 0)
-                
-                # Fast Python-based heuristic score
-                score = min(100, 50 + (public_repos * 2) + (followers * 5))
-                
-                return {
-                    "username": name,
-                    "score": score
-                }
+                score = min(100, 40 + (public_repos * 2) + (followers * 5))
+                return {"username": name, "score": score}
         except Exception as e:
             print(f"GitHub API Error: {e}")
             return self._simulate_scan("github", url_or_username)
             
     def _simulate_scan(self, platform: str, value: str) -> dict:
-        # Avoid Vercel 10s timeout by not using Gemini for fake scores
-        # We simulate a solid profile score for demo purposes
+        """Fast, instant profile score — no AI calls."""
         username = "Profile Found"
         if "linkedin.com/in/" in value:
-            username = value.split("linkedin.com/in/")[-1].strip("/").replace("-", " ").title()
+            # Strip UTM params and clean up the username from the URL
+            path = value.split("linkedin.com/in/")[-1].split("?")[0].strip("/")
+            username = path.replace("-", " ").title()
         elif "github.com/" in value:
             username = value.split("github.com/")[-1].strip("/")
-            
-        return {
-            "username": username,
-            "score": 85
-        }
-        
+        elif "leetcode.com/u/" in value or "leetcode.com/" in value:
+            username = value.split("leetcode.com/")[-1].strip("/").replace("u/", "")
+
+        return {"username": username or "Profile Found", "score": 85}
+
     def _parse_json(self, text: str, default: dict) -> dict:
         try:
             if text.startswith("```json"):
                 text = text[7:-3]
             elif text.startswith("```"):
                 text = text[3:-3]
-            
-            # sometimes the response has leading/trailing whitespaces or newlines
             text = text.strip()
             return json.loads(text)
         except Exception:
