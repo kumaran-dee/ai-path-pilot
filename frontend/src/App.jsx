@@ -1,7 +1,7 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Link, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { LayoutDashboard, FileText, Briefcase, TrendingUp, Map, MessageSquare, MessageCircle, Compass, Shield } from 'lucide-react';
+import { LayoutDashboard, FileText, Briefcase, TrendingUp, Map, HelpCircle, MessageCircle, Compass, Shield } from 'lucide-react';
 
 import Dashboard from './pages/Dashboard';
 import ResumeUpload from './pages/ResumeUpload';
@@ -23,7 +23,7 @@ function Sidebar() {
     { path: '/', label: 'Dashboard', icon: <LayoutDashboard size={20} /> },
     { path: '/compare', label: 'Compare', icon: <Briefcase size={20} /> },
     { path: '/roadmap', label: 'Roadmap', icon: <Map size={20} /> },
-    { path: '/chat', label: 'AI Chat', icon: <MessageSquare size={20} /> },
+    { path: '/chat', label: 'FAQ', icon: <HelpCircle size={20} /> },
   ];
 
   if (isAdmin) {
