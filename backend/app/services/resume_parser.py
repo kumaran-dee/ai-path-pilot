@@ -1,4 +1,4 @@
-import fitz  # PyMuPDF
+import pypdf
 import google.generativeai as genai
 import json
 import os
@@ -15,16 +15,16 @@ model = genai.GenerativeModel("gemini-2.5-flash")
 class ResumeParser:
 
     def extract_text(self, pdf_path):
-
-        doc = fitz.open(pdf_path)
-
         text = ""
-
-        for page in doc:
-            text += page.get_text()
-
-        doc.close()
-
+        try:
+            with open(pdf_path, "rb") as f:
+                reader = pypdf.PdfReader(f)
+                for page in reader.pages:
+                    page_text = page.extract_text()
+                    if page_text:
+                        text += page_text + "\n"
+        except Exception as e:
+            print(f"Error extracting PDF text: {e}")
         return text
 
     def extract_candidate_profile(self, resume_text):
