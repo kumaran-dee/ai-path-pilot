@@ -10,6 +10,7 @@ export const uploadResume = (formData) => api.post('/resume/upload', formData, {
     'Content-Type': 'multipart/form-data',
   },
 });
+export const getResumeDetails = () => api.get('/resume/details');
 
 // Opportunity API
 export const getOpportunities = () => api.get('/opportunity/match');

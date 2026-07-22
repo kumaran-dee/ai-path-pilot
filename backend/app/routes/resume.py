@@ -91,4 +91,15 @@ def analyze_resume():
 
 @bp.route('/details', methods=['GET'])
 def get_resume_details():
-    return success_response("Resume details stub")
+    try:
+        # Assume user_id = 1 for now
+        user_id = 1
+        resume_record = Resume.query.filter_by(user_id=user_id).first()
+        
+        if not resume_record or not resume_record.parsed_json:
+            return error_response("No resume found for this user.", 404)
+            
+        return success_response("Resume details retrieved.", resume_record.parsed_json)
+        
+    except Exception as e:
+        return error_response(f"Failed to retrieve resume details: {str(e)}", 500)

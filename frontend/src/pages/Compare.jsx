@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
-import { FileText, Link as LinkIcon, UploadCloud, Sparkles, CheckCircle, XCircle, Loader2, AlertCircle, ArrowRight, Lightbulb, BookOpen, User, Star } from 'lucide-react';
-import { compareResumeToJob } from '../services/api';
+import { FileText, Link as LinkIcon, UploadCloud, Sparkles, CheckCircle, XCircle, Loader2, AlertCircle, ArrowRight, Lightbulb, BookOpen, User, Star, Eye, X } from 'lucide-react';
+import { compareResumeToJob, getResumeDetails } from '../services/api';
 
 export default function Compare() {
   const [jobLink, setJobLink] = useState('');
@@ -10,7 +10,24 @@ export default function Compare() {
   const [resumeFile, setResumeFile] = useState(null);
   const [isComparing, setIsComparing] = useState(false);
   const [results, setResults] = useState(null);
+  const [detailedResume, setDetailedResume] = useState(null);
+  const [isFetchingDetails, setIsFetchingDetails] = useState(false);
+  const [showModal, setShowModal] = useState(false);
   const navigate = useNavigate();
+
+  const handleViewDetails = async () => {
+    setIsFetchingDetails(true);
+    try {
+      const res = await getResumeDetails();
+      setDetailedResume(res.data.data);
+      setShowModal(true);
+    } catch (err) {
+      console.error(err);
+      alert("No parsed resume found in the database. Please upload one first.");
+    } finally {
+      setIsFetchingDetails(false);
+    }
+  };
 
   const validateJobLink = (url) => {
     if (!url || url.trim() === '') return '';
@@ -72,11 +89,21 @@ export default function Compare() {
           <h2 className="text-2xl font-bold text-white mb-2">Your Resume</h2>
           <p className="text-gray-400 mb-6 text-sm">Upload your latest PDF or DOCX resume.</p>
           
-          <label className="cursor-pointer w-full border-2 border-dashed border-gray-600 rounded-xl p-8 hover:bg-gray-800 transition-colors flex flex-col items-center">
-            <UploadCloud size={32} className="text-gray-400 mb-3" />
-            <span className="text-blue-400 font-semibold">{resumeFile ? resumeFile.name : 'Click to Browse or Drag File'}</span>
-            <input type="file" className="hidden" accept=".pdf,.doc,.docx" onChange={handleFileChange} />
-          </label>
+          <div className="flex w-full space-x-4">
+            <label className="cursor-pointer flex-1 border-2 border-dashed border-gray-600 rounded-xl p-8 hover:bg-gray-800 transition-colors flex flex-col items-center">
+              <UploadCloud size={32} className="text-gray-400 mb-3" />
+              <span className="text-blue-400 font-semibold">{resumeFile ? resumeFile.name : 'Browse or Drag File'}</span>
+              <input type="file" className="hidden" accept=".pdf,.doc,.docx" onChange={handleFileChange} />
+            </label>
+          </div>
+          <button 
+            onClick={handleViewDetails}
+            disabled={isFetchingDetails}
+            className="mt-4 flex items-center space-x-2 text-sm text-gray-400 hover:text-white transition-colors"
+          >
+            {isFetchingDetails ? <Loader2 size={16} className="animate-spin" /> : <Eye size={16} />}
+            <span>Detailed Resume (Testing)</span>
+          </button>
         </div>
 
         {/* Job Link Grid Column */}
@@ -228,6 +255,35 @@ export default function Compare() {
             <p className="text-gray-300 leading-relaxed max-w-3xl">{results.reason}</p>
           </div>
         </motion.div>
+      )}
+
+      {/* Detailed Resume Modal */}
+      {showModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
+          <motion.div 
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="bg-[#1e2128] border border-gray-700 rounded-2xl p-6 w-full max-w-3xl max-h-[85vh] flex flex-col shadow-2xl relative"
+          >
+            <button 
+              onClick={() => setShowModal(false)}
+              className="absolute top-4 right-4 text-gray-400 hover:text-white transition-colors"
+            >
+              <X size={24} />
+            </button>
+            <h2 className="text-2xl font-bold mb-4 text-white flex items-center">
+              <Eye className="mr-3 text-blue-400" /> Extracted Candidate Profile
+            </h2>
+            <p className="text-gray-400 text-sm mb-4">This is the raw internal profile the AI has extracted and saved into the SQLite database.</p>
+            
+            <div className="bg-gray-900 rounded-xl p-4 overflow-auto flex-1 border border-gray-800">
+              <pre className="text-green-400 text-sm font-mono whitespace-pre-wrap break-words">
+                {JSON.stringify(detailedResume, null, 2)}
+              </pre>
+            </div>
+            
+          </motion.div>
+        </div>
       )}
 
     </motion.div>
