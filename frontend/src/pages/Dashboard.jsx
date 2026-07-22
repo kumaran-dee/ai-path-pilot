@@ -282,157 +282,75 @@ export default function Dashboard() {
         </button>
       </div>
 
-      {/* AI Recommendations */}
-      {scanResults && scanResults.recommendations && (
+      {/* Linked Profile Details */}
+      {scanResults && scanResults.scores && (
         <motion.div 
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           className="mt-16"
         >
-          <div className="mb-8 flex items-center justify-between">
-            <div className="flex items-center space-x-3">
-              <Sparkles className="text-primary" size={28} />
-              <h2 className="text-2xl font-bold">AI Personalized Recommendations</h2>
-            </div>
-            {scanResults.recommendations.career_score !== undefined && (
-              <div className="bg-gray-800 border border-gray-700 px-4 py-2 rounded-full flex items-center space-x-2">
-                <span className="text-gray-400 text-sm">Career Score:</span>
-                <span className="text-white font-bold">{scanResults.recommendations.career_score}/100</span>
-              </div>
-            )}
-          </div>
-
-          {/* Skills Badges */}
-          <div className="mb-10 grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="bg-[#1e2128]/50 p-6 rounded-2xl border border-green-500/20">
-              <div className="flex items-center space-x-2 mb-4 text-green-400">
-                <CheckCircle size={20} />
-                <h3 className="font-bold">Detected Skills</h3>
-              </div>
-              <div className="flex flex-wrap gap-2">
-                {scanResults.recommendations.detected_skills?.length > 0 ? (
-                  scanResults.recommendations.detected_skills.map((skill, idx) => (
-                    <span key={idx} className="bg-green-500/10 text-green-400 border border-green-500/20 px-3 py-1 rounded-full text-xs font-semibold">
-                      {skill}
-                    </span>
-                  ))
-                ) : (
-                  <span className="text-gray-500 text-sm">No specific skills detected.</span>
-                )}
-              </div>
-            </div>
-
-            <div className="bg-[#1e2128]/50 p-6 rounded-2xl border border-red-500/20">
-              <div className="flex items-center space-x-2 mb-4 text-red-400">
-                <XCircle size={20} />
-                <h3 className="font-bold">Missing Core Skills</h3>
-              </div>
-              <div className="flex flex-wrap gap-2">
-                {scanResults.recommendations.missing_skills?.length > 0 ? (
-                  scanResults.recommendations.missing_skills.map((skill, idx) => (
-                    <span key={idx} className="bg-red-500/10 text-red-400 border border-red-500/20 px-3 py-1 rounded-full text-xs font-semibold">
-                      {skill}
-                    </span>
-                  ))
-                ) : (
-                  <span className="text-gray-500 text-sm">You have all core skills!</span>
-                )}
-              </div>
-            </div>
+          <div className="mb-8 flex items-center space-x-3">
+            <Sparkles className="text-primary" size={28} />
+            <h2 className="text-2xl font-bold">Profile Analysis Results</h2>
           </div>
           
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            
-            {/* Jobs Card */}
-            <div className="bg-[#1e2128] p-6 rounded-2xl border border-gray-800">
-              <div className="flex items-center space-x-3 mb-4 text-blue-400">
-                <Briefcase size={24} />
-                <h3 className="text-lg font-bold text-white">Recommended Jobs</h3>
-              </div>
-              <ul className="space-y-3">
-                {scanResults.recommendations.jobs?.map((item, idx) => (
-                  <li key={idx} className="flex items-start text-sm text-gray-300">
-                    <ChevronRight size={16} className="text-blue-500 mr-2 flex-shrink-0 mt-0.5" />
-                    <a href={getSearchUrl(item, 'jobs')} target="_blank" rel="noopener noreferrer" className="hover:text-white hover:underline transition-colors">
-                      {item}
-                    </a>
-                  </li>
-                ))}
-              </ul>
-            </div>
+            {Object.entries(scanResults.scores).map(([platform, data]) => {
+              if (data.status === "no profile detected") {
+                return (
+                  <div key={platform} className="bg-[#1e2128]/50 p-6 rounded-2xl border border-red-500/20 flex flex-col justify-between">
+                    <div className="flex items-center space-x-3 mb-4">
+                      {platform === 'github' ? <Terminal className="text-pink-400" size={24} /> : 
+                       platform === 'leetcode' ? <Cpu className="text-yellow-500" size={24} /> : 
+                       platform === 'linkedin' ? <Briefcase className="text-amber-600" size={24} /> : 
+                       platform === 'portfolio' ? <Globe className="text-blue-400" size={24} /> : 
+                       <FileText className="text-gray-400" size={24} />}
+                      <h3 className="text-lg font-bold text-white capitalize">{platform}</h3>
+                    </div>
+                    <div className="flex items-center space-x-2 text-red-400 mt-2">
+                      <XCircle size={18} />
+                      <span className="font-semibold text-sm">no profile detected</span>
+                    </div>
+                  </div>
+                );
+              }
 
-            {/* Internships Card */}
-            <div className="bg-[#1e2128] p-6 rounded-2xl border border-gray-800">
-              <div className="flex items-center space-x-3 mb-4 text-purple-400">
-                <GraduationCap size={24} />
-                <h3 className="text-lg font-bold text-white">Internships</h3>
-              </div>
-              <ul className="space-y-3">
-                {scanResults.recommendations.internships?.map((item, idx) => (
-                  <li key={idx} className="flex items-start text-sm text-gray-300">
-                    <ChevronRight size={16} className="text-purple-500 mr-2 flex-shrink-0 mt-0.5" />
-                    <a href={getSearchUrl(item, 'internships')} target="_blank" rel="noopener noreferrer" className="hover:text-white hover:underline transition-colors">
-                      {item}
-                    </a>
-                  </li>
-                ))}
-              </ul>
-            </div>
+              return (
+                <div key={platform} className="bg-[#1e2128] p-6 rounded-2xl border border-gray-800 flex flex-col relative overflow-hidden">
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center space-x-3">
+                      {platform === 'github' ? <Terminal className="text-pink-400" size={24} /> : 
+                       platform === 'leetcode' ? <Cpu className="text-yellow-500" size={24} /> : 
+                       platform === 'linkedin' ? <Briefcase className="text-amber-600" size={24} /> : 
+                       platform === 'portfolio' ? <Globe className="text-blue-400" size={24} /> : 
+                       <FileText className="text-gray-400" size={24} />}
+                      <h3 className="text-lg font-bold text-white capitalize">{platform}</h3>
+                    </div>
+                    {data.score > 0 && (
+                      <div className="bg-primary/20 text-primary px-2 py-1 rounded text-xs font-bold">
+                        Score: {data.score}
+                      </div>
+                    )}
+                  </div>
+                  
+                  <div className="mb-4">
+                    <span className="text-xs text-gray-500 uppercase tracking-widest">Username / Name</span>
+                    <p className="text-white font-medium truncate">{data.username}</p>
+                  </div>
 
-            {/* Hackathons Card */}
-            <div className="bg-[#1e2128] p-6 rounded-2xl border border-gray-800">
-              <div className="flex items-center space-x-3 mb-4 text-green-400">
-                <Code size={24} />
-                <h3 className="text-lg font-bold text-white">Hackathons</h3>
-              </div>
-              <ul className="space-y-3">
-                {scanResults.recommendations.hackathons?.map((item, idx) => (
-                  <li key={idx} className="flex items-start text-sm text-gray-300">
-                    <ChevronRight size={16} className="text-green-500 mr-2 flex-shrink-0 mt-0.5" />
-                    <a href={getSearchUrl(item, 'hackathons')} target="_blank" rel="noopener noreferrer" className="hover:text-white hover:underline transition-colors">
-                      {item}
-                    </a>
-                  </li>
-                ))}
-              </ul>
-            </div>
-
-            {/* Workshops Card */}
-            <div className="bg-[#1e2128] p-6 rounded-2xl border border-gray-800">
-              <div className="flex items-center space-x-3 mb-4 text-orange-400">
-                <BookOpen size={24} />
-                <h3 className="text-lg font-bold text-white">Workshops to Attend</h3>
-              </div>
-              <ul className="space-y-3">
-                {scanResults.recommendations.workshops?.map((item, idx) => (
-                  <li key={idx} className="flex items-start text-sm text-gray-300">
-                    <ChevronRight size={16} className="text-orange-500 mr-2 flex-shrink-0 mt-0.5" />
-                    <a href={getSearchUrl(item, 'workshops')} target="_blank" rel="noopener noreferrer" className="hover:text-white hover:underline transition-colors">
-                      {item}
-                    </a>
-                  </li>
-                ))}
-              </ul>
-            </div>
-
-            {/* LeetCode Card */}
-            <div className="bg-[#1e2128] p-6 rounded-2xl border border-gray-800">
-              <div className="flex items-center space-x-3 mb-4 text-yellow-500">
-                <Terminal size={24} />
-                <h3 className="text-lg font-bold text-white">LeetCode Practice</h3>
-              </div>
-              <ul className="space-y-3">
-                {scanResults.recommendations.leetcode_problems?.map((item, idx) => (
-                  <li key={idx} className="flex items-start text-sm text-gray-300">
-                    <ChevronRight size={16} className="text-yellow-500 mr-2 flex-shrink-0 mt-0.5" />
-                    <a href={getSearchUrl(item, 'leetcode_problems')} target="_blank" rel="noopener noreferrer" className="hover:text-white hover:underline transition-colors">
-                      {item}
-                    </a>
-                  </li>
-                ))}
-              </ul>
-            </div>
-
+                  {data.details && Object.keys(data.details).length > 0 && (
+                    <div className="mt-auto pt-4 border-t border-gray-800 grid grid-cols-2 gap-3">
+                      {Object.entries(data.details).map(([k, v]) => (
+                        <div key={k} className="flex flex-col">
+                          <span className="text-[10px] text-gray-500 uppercase block mb-0.5">{k}</span>
+                          <span className="text-sm text-gray-300 font-semibold truncate" title={v}>{v !== null && v !== "" ? v : "N/A"}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
           </div>
         </motion.div>
       )}

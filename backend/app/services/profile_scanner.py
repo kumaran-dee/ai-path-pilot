@@ -14,11 +14,13 @@ class ProfileScanner:
             val_str = str(value).strip()
             
             if not self._is_valid_link(key, val_str):
-                results[key] = {"username": "Invalid Link", "score": 0}
+                results[key] = {"username": "no profile detected", "score": 0, "status": "no profile detected"}
                 continue
             
             if key == "github":
                 results[key] = self._scan_github(val_str)
+            elif key == "leetcode":
+                results[key] = self._scan_leetcode(val_str)
             else:
                 results[key] = self._simulate_scan(key, val_str)
                 
@@ -162,10 +164,65 @@ class ProfileScanner:
                 public_repos = data.get("public_repos", 0)
                 followers = data.get("followers", 0)
                 score = min(100, 40 + (public_repos * 2) + (followers * 5))
-                return {"username": name, "score": score}
+                return {
+                    "username": name, 
+                    "score": score,
+                    "details": {
+                        "Public Repos": public_repos,
+                        "Followers": followers,
+                        "Following": data.get("following", 0),
+                        "Company": data.get("company", "N/A")
+                    },
+                    "status": "active"
+                }
         except Exception as e:
             print(f"GitHub API Error: {e}")
-            return self._simulate_scan("github", url_or_username)
+            return {"username": "no profile detected", "score": 0, "status": "no profile detected"}
+
+    def _scan_leetcode(self, url_or_username: str) -> dict:
+        username = url_or_username
+        if "leetcode.com/" in url_or_username:
+            username = url_or_username.split("leetcode.com/")[-1].strip("/").replace("u/", "")
+        
+        try:
+            # Leetcode GraphQL API
+            req = urllib.request.Request(
+                "https://leetcode.com/graphql",
+                data=json.dumps({
+                    "query": "\n    query userPublicProfile($username: String!) {\n  matchedUser(username: $username) {\n    contestBadge {\n      name\n      expired\n      hoverText\n      icon\n    }\n    username\n    githubUrl\n    twitterUrl\n    linkedinUrl\n    profile {\n      ranking\n      userAvatar\n      realName\n      aboutMe\n      school\n      websites\n      countryName\n      company\n      jobTitle\n      skillTags\n      postViewCount\n      postViewCountDiff\n      reputation\n      reputationDiff\n      solutionCount\n      solutionCountDiff\n      categoryDiscussCount\n      categoryDiscussCountDiff\n    }\n  }\n}\n    ",
+                    "variables": {"username": username}
+                }).encode('utf-8'),
+                headers={
+                    'Content-Type': 'application/json',
+                    'User-Agent': 'Mozilla/5.0'
+                }
+            )
+            with urllib.request.urlopen(req, timeout=3) as response:
+                data = json.loads(response.read().decode())
+                user_data = data.get("data", {}).get("matchedUser", {})
+                if not user_data:
+                    return {"username": "no profile detected", "score": 0, "status": "no profile detected"}
+                
+                profile = user_data.get("profile", {})
+                real_name = profile.get("realName") or username
+                ranking = profile.get("ranking", 0)
+                reputation = profile.get("reputation", 0)
+                
+                score = min(100, 60 + (reputation // 10))
+                return {
+                    "username": real_name, 
+                    "score": score,
+                    "details": {
+                        "Ranking": ranking,
+                        "Reputation": reputation,
+                        "Company": profile.get("company", "N/A"),
+                        "School": profile.get("school", "N/A")
+                    },
+                    "status": "active"
+                }
+        except Exception as e:
+            print(f"LeetCode API Error: {e}")
+            return {"username": "no profile detected", "score": 0, "status": "no profile detected"}
             
     def _simulate_scan(self, platform: str, value: str) -> dict:
         """Fast, instant profile score — no AI calls."""
@@ -179,7 +236,18 @@ class ProfileScanner:
         elif "leetcode.com/u/" in value or "leetcode.com/" in value:
             username = value.split("leetcode.com/")[-1].strip("/").replace("u/", "")
 
-        return {"username": username or "Profile Found", "score": 85}
+        if not username or username == "Profile Found":
+            return {"username": "no profile detected", "score": 0, "status": "no profile detected"}
+
+        return {
+            "username": username, 
+            "score": 85,
+            "details": {
+                "Status": "Verified",
+                "Platform": platform.capitalize()
+            },
+            "status": "active"
+        }
 
     def _parse_json(self, text: str, default: dict) -> dict:
         try:
