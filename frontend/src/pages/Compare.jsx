@@ -6,10 +6,24 @@ import { compareResumeToJob } from '../services/api';
 
 export default function Compare() {
   const [jobLink, setJobLink] = useState('');
+  const [jobLinkError, setJobLinkError] = useState('');
   const [resumeFile, setResumeFile] = useState(null);
   const [isComparing, setIsComparing] = useState(false);
   const [results, setResults] = useState(null);
   const navigate = useNavigate();
+
+  const validateJobLink = (url) => {
+    if (!url || url.trim() === '') return '';
+    try {
+      const parsed = new URL(url);
+      if (parsed.protocol !== 'https:' && parsed.protocol !== 'http:') {
+        return 'Must be a valid http or https URL';
+      }
+      return '';
+    } catch (e) {
+      return 'Please enter a valid URL (e.g., https://...)';
+    }
+  };
 
   const handleFileChange = (e) => {
     if (e.target.files && e.target.files[0]) {
@@ -78,9 +92,14 @@ export default function Compare() {
               type="url" 
               placeholder="e.g., https://linkedin.com/jobs/..." 
               value={jobLink}
-              onChange={(e) => setJobLink(e.target.value)}
-              className="w-full bg-gray-900 border border-gray-700 rounded-xl p-4 text-white focus:outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500 transition-all text-center"
+              onChange={(e) => {
+                const val = e.target.value;
+                setJobLink(val);
+                setJobLinkError(validateJobLink(val));
+              }}
+              className={`w-full bg-gray-900 border ${jobLinkError ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : 'border-gray-700 focus:border-purple-500 focus:ring-purple-500'} rounded-xl p-4 text-white focus:outline-none focus:ring-1 transition-all text-center mb-1`}
             />
+            {jobLinkError && <span className="text-red-400 text-xs mt-2">{jobLinkError}</span>}
           </div>
         </div>
 
@@ -89,7 +108,7 @@ export default function Compare() {
       <div className="flex justify-center">
         <button 
           onClick={handleCompare}
-          disabled={!resumeFile || !jobLink || isComparing}
+          disabled={!resumeFile || !jobLink || !!jobLinkError || isComparing}
           className="flex items-center space-x-3 px-12 py-4 bg-gradient-to-r from-blue-600 to-purple-600 text-white font-bold text-xl rounded-full shadow-lg disabled:opacity-50 disabled:cursor-not-allowed hover:scale-105 transition-transform"
         >
           {isComparing ? <Loader2 size={24} className="animate-spin" /> : <Sparkles size={24} />}
