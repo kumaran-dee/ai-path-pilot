@@ -183,7 +183,7 @@ Return ONLY the JSON object.
             print("WARNING: GEMINI_API_KEY is not set. Using fallback empty profile.")
             result = "{}"
         else:
-            url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={api_key}"
+            url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent?key={api_key}"
             data = json.dumps({
                 "contents": [{"parts": [{"text": prompt}]}]
             }).encode('utf-8')

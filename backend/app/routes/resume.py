@@ -72,7 +72,7 @@ def extract_via_gemini_vision(file_bytes, filename, mime_type="application/pdf")
         return None  # No key → skip, use mock
 
     b64_data = base64.b64encode(file_bytes).decode("utf-8")
-    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={api_key}"
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent?key={api_key}"
 
     prompt_text = f"""
 You are an expert resume parser with OCR capabilities.
@@ -337,3 +337,58 @@ def get_resume_details():
         return error_response("No resume found. Please upload first.", 404)
     except Exception:
         return error_response("No resume found. Please upload first.", 404)
+
+@bp.route('/extract-json', methods=['POST'])
+def extract_raw_json():
+    """Extract resume and return the raw JSON file directly to the user."""
+    from flask import Response
+    file = request.files.get('file')
+    if not file or file.filename == '':
+        return error_response("No file selected.", 400)
+    if not allowed_file(file.filename):
+        return error_response("File type not allowed.", 400)
+
+    filename = secure_filename(file.filename)
+    ext = filename.rsplit('.', 1)[1].lower()
+    file_bytes = file.read()
+
+    tmp_path = os.path.join(tempfile.gettempdir(), filename)
+    with open(tmp_path, 'wb') as f:
+        f.write(file_bytes)
+
+    raw_text = ""
+    structured_data = None
+
+    try:
+        if ext == 'pdf':
+            raw_text = extract_text_pdfplumber(tmp_path)
+            if not raw_text:
+                raw_text = extract_text_pypdf(tmp_path)
+            if not raw_text:
+                structured_data = extract_via_gemini_vision(file_bytes, filename, "application/pdf")
+
+        elif ext in ('docx', 'doc'):
+            raw_text = extract_text_docx(tmp_path)
+            if not raw_text:
+                structured_data = extract_via_gemini_vision(
+                    file_bytes, filename,
+                    "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                )
+
+        if structured_data is None:
+            from app.services.resume_parser import resume_parser
+            structured_data = resume_parser.extract_candidate_profile(raw_text)
+
+        # Remove backend-specific injected compatibility keys to give pure JSON
+        keys_to_remove = ["FullName", "ResumeScore", "CareerReadinessScore", "Skills", "TechnicalSkills", "SoftSkills", "Education", "Experience", "Projects", "Certifications", "Achievements", "Research", "Languages", "Interests", "CareerDomain", "PreferredRole", "PreferredRoles", "EmailAddress", "PhoneNumber", "Location", "LinkedInURL", "GitHubURL", "PortfolioURL", "YearsOfExperience", "ResumeStrengths", "ResumeWeaknesses", "_filename", "_source", "_raw_text_preview"]
+        pure_json = {k: v for k, v in structured_data.items() if k not in keys_to_remove}
+
+        json_str = json.dumps(pure_json, indent=4)
+        return Response(
+            json_str,
+            mimetype="application/json",
+            headers={"Content-Disposition": f"attachment;filename=extracted_resume_{filename}.json"}
+        )
+    except Exception as e:
+        print(f"Error in extract_raw_json: {e}")
+        return error_response(f"Extraction failed: {str(e)}", 500)

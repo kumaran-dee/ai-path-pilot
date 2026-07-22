@@ -17,7 +17,7 @@ class GeminiService:
             print("WARNING: GEMINI_API_KEY is not configured. Falling back to mock response.")
             return self._get_mock_response(prompt)
         # Use raw HTTP request to bypass protobuf/Python 3.14 crashes!
-        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={self.api_key}"
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent?key={self.api_key}"
         
         data = json.dumps({
             "contents": [{"parts": [{"text": prompt}]}]
