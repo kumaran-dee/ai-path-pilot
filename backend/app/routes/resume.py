@@ -95,37 +95,43 @@ STRICT RULES
 
 Return ONLY a valid JSON object (no markdown, no backticks) with this exact schema:
 {{
-  "PersonalInformation": {{
-    "FullName": "",
-    "DateOfBirth": null,
-    "Gender": null,
-    "Nationality": null,
-    "CurrentLocation": null
+  "personal_information": {{
+    "full_name": "",
+    "date_of_birth": null,
+    "gender": null,
+    "nationality": null,
+    "current_location": null
   }},
-  "ContactDetails": {{
-    "Email": "",
-    "Phone": "",
-    "LinkedIn": "",
-    "GitHub": "",
-    "Portfolio": "",
-    "Website": "",
-    "Address": null
+  "contact_details": {{
+    "email": "",
+    "phone": "",
+    "linkedin": "",
+    "github": "",
+    "portfolio": "",
+    "website": "",
+    "location": null
   }},
-  "Education": [],
-  "Experience": [],
-  "Skills": [],
-  "TechnicalSkills": [],
-  "SoftSkills": [],
-  "Projects": [],
-  "Certifications": [],
-  "Achievements": [],
-  "Research": [],
-  "Languages": [],
-  "CareerDomain": "",
-  "PreferredRoles": [],
-  "ResumeScore": 85,
-  "CareerReadiness": 80,
-  "AdditionalMetadata": {{}}
+  "education": [],
+  "experience": [],
+  "skills": [],
+  "technical_skills": {{
+    "programming_languages": [],
+    "frameworks": [],
+    "database": [],
+    "ai_ml": [],
+    "tools": []
+  }},
+  "soft_skills": [],
+  "projects": [],
+  "certifications": [],
+  "achievements": [],
+  "research": [],
+  "languages": [],
+  "career_domain": "",
+  "preferred_roles": [],
+  "resume_score": 85,
+  "career_readiness": 80,
+  "additional_metadata": {{}}
 }}
 """
 
@@ -152,39 +158,47 @@ Return ONLY a valid JSON object (no markdown, no backticks) with this exact sche
             
             profile = json.loads(raw)
             # ── Inject compatibility keys for front-end rendering ──
-            personal_info = profile.get("PersonalInformation") or {}
-            contact = profile.get("ContactDetails") or {}
+            personal_info = profile.get("personal_information") or {}
+            contact = profile.get("contact_details") or {}
             
-            profile["FullName"] = personal_info.get("FullName") or ""
-            profile["ResumeScore"] = profile.get("ResumeScore") or 0
-            profile["CareerReadinessScore"] = profile.get("CareerReadiness") or 0
-            profile["Skills"] = profile.get("Skills") or []
+            profile["FullName"] = personal_info.get("full_name") or ""
+            profile["ResumeScore"] = profile.get("resume_score") or 0
+            profile["CareerReadinessScore"] = profile.get("career_readiness") or 0
+            profile["Skills"] = profile.get("skills") or []
             
-            tech_skills = profile.get("TechnicalSkills") or []
-            profile["TechnicalSkills"] = tech_skills if isinstance(tech_skills, list) else []
-            profile["SoftSkills"] = profile.get("SoftSkills") or []
+            # Flatten technical_skills if it's a nested dict now
+            tech_skills = profile.get("technical_skills") or []
+            if isinstance(tech_skills, dict):
+                flat_tech = []
+                for v in tech_skills.values():
+                    if isinstance(v, list): flat_tech.extend(v)
+                profile["TechnicalSkills"] = flat_tech
+            else:
+                profile["TechnicalSkills"] = tech_skills if isinstance(tech_skills, list) else []
+                
+            profile["SoftSkills"] = profile.get("soft_skills") or []
             
-            profile["Education"] = profile.get("Education") or []
-            profile["Experience"] = profile.get("Experience") or []
-            profile["Projects"] = profile.get("Projects") or []
-            profile["Certifications"] = profile.get("Certifications") or []
-            profile["Achievements"] = profile.get("Achievements") or []
-            profile["Research"] = profile.get("Research") or []
-            profile["Languages"] = profile.get("Languages") or []
+            profile["Education"] = profile.get("education") or []
+            profile["Experience"] = profile.get("experience") or []
+            profile["Projects"] = profile.get("projects") or []
+            profile["Certifications"] = profile.get("certifications") or []
+            profile["Achievements"] = profile.get("achievements") or []
+            profile["Research"] = profile.get("research") or []
+            profile["Languages"] = profile.get("languages") or []
             profile["Interests"] = [] # Not explicitly in new schema
             
-            c_domain = profile.get("CareerDomain") or ""
+            c_domain = profile.get("career_domain") or ""
             profile["CareerDomain"] = ", ".join(c_domain) if isinstance(c_domain, list) else str(c_domain)
-            pref_roles = profile.get("PreferredRoles") or ""
+            pref_roles = profile.get("preferred_roles") or ""
             profile["PreferredRole"] = ", ".join(pref_roles) if isinstance(pref_roles, list) else str(pref_roles)
             profile["PreferredRoles"] = pref_roles if isinstance(pref_roles, list) else [str(pref_roles)]
             
-            profile["EmailAddress"] = contact.get("Email") or ""
-            profile["PhoneNumber"] = contact.get("Phone") or ""
-            profile["Location"] = contact.get("Address") or personal_info.get("CurrentLocation") or ""
-            profile["LinkedInURL"] = contact.get("LinkedIn") or ""
-            profile["GitHubURL"] = contact.get("GitHub") or ""
-            profile["PortfolioURL"] = contact.get("Portfolio") or ""
+            profile["EmailAddress"] = contact.get("email") or ""
+            profile["PhoneNumber"] = contact.get("phone") or ""
+            profile["Location"] = contact.get("location") or personal_info.get("current_location") or ""
+            profile["LinkedInURL"] = contact.get("linkedin") or ""
+            profile["GitHubURL"] = contact.get("github") or ""
+            profile["PortfolioURL"] = contact.get("portfolio") or ""
                 
             profile["YearsOfExperience"] = "0 (Student/Fresher)" # Derived later usually
             profile["ResumeStrengths"] = []
