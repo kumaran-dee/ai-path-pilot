@@ -138,8 +138,8 @@ class ProfileScanner:
         if platform == "resume":
             return value.lower().endswith(".pdf")
             
-        # Allow just usernames for github/leetcode
-        if platform in ["github", "leetcode"] and " " not in value and not value.startswith("http"):
+        # Allow just usernames for all platforms
+        if platform in ["github", "leetcode", "linkedin", "portfolio"] and " " not in value and not value.startswith("http"):
             return True
             
         if not value.startswith("http://") and not value.startswith("https://"):
@@ -228,17 +228,23 @@ class ProfileScanner:
             
     def _simulate_scan(self, platform: str, value: str) -> dict:
         """Fast, instant profile score — no AI calls."""
-        username = "Profile Found"
+        username = value
         if "linkedin.com/in/" in value:
             # Strip UTM params and clean up the username from the URL
             path = value.split("linkedin.com/in/")[-1].split("?")[0].strip("/")
             username = path.replace("-", " ").title()
+        elif "linkedin.com/" in value:
+            path = value.split("linkedin.com/")[-1].split("?")[0].strip("/")
+            username = path.replace("-", " ").title()
         elif "github.com/" in value:
             username = value.split("github.com/")[-1].strip("/")
-        elif "leetcode.com/u/" in value or "leetcode.com/" in value:
+        elif "leetcode.com/" in value:
             username = value.split("leetcode.com/")[-1].strip("/").replace("u/", "")
 
-        if not username or username == "Profile Found":
+        if username.startswith("http"):
+            username = username.split("://")[-1].split("/")[0]
+
+        if not username:
             return {"username": "no profile detected", "score": 0, "status": "no profile detected"}
 
         details = {
