@@ -6,7 +6,7 @@ import {
   CheckCircle, XCircle, Loader2, AlertCircle, ArrowRight,
   Lightbulb, BookOpen, Eye, X, Copy, Check, Terminal,
   User, Mail, Phone, MapPin, Code2, Award, GraduationCap,
-  Briefcase, Star, BookMarked, Globe, ExternalLink
+  Briefcase, Star, BookMarked, Globe, ExternalLink, Download
 } from 'lucide-react';
 import { compareResumeToJob, uploadResume, getResumeDetails } from '../services/api';
 
@@ -382,10 +382,25 @@ export default function Compare() {
   };
 
   const handleCopy = () => {
-    if (!detailedResume) return;
-    navigator.clipboard.writeText(JSON.stringify(detailedResume, null, 2));
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+    if (detailedResume) {
+      navigator.clipboard.writeText(JSON.stringify(detailedResume, null, 2));
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }
+  };
+
+  const handleDownload = () => {
+    if (detailedResume) {
+      const blob = new Blob([JSON.stringify(detailedResume, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'detailed_resume_profile.json';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }
   };
 
   const validateJobLink = (url) => {
@@ -641,6 +656,13 @@ export default function Compare() {
                   >
                     <Terminal size={13} />
                     {jsonView ? 'Structured View' : 'Raw JSON'}
+                  </button>
+                  <button
+                    onClick={handleDownload}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-gray-700 text-xs font-semibold text-gray-300 hover:text-white hover:bg-gray-800 transition-colors"
+                  >
+                    <Download size={13} />
+                    Download JSON
                   </button>
                   <button
                     onClick={handleCopy}
