@@ -6,6 +6,9 @@ from werkzeug.utils import secure_filename
 from flask import Blueprint, request, current_app
 from app.utilities.response import success_response, error_response
 from app.services.gemini_service import gemini_service
+from app.extensions import db
+from app.models.resume import Resume
+from app.models.user import User
 
 bp = Blueprint('resume', __name__)
 
@@ -54,13 +57,31 @@ def upload_resume():
                 
             structured_data = gemini_service.extract_resume_data(extracted_text)
             
+            # Associate with a dummy user for now (user_id = 1)
+            user_id = 1
+            user = User.query.get(user_id)
+            if not user:
+                user = User(id=user_id, username='testuser', email='test@example.com', password_hash='mock')
+                db.session.add(user)
+                db.session.commit()
+                
+            # Replace previous AI profile if exists
+            resume_record = Resume.query.filter_by(user_id=user_id).first()
+            if resume_record:
+                resume_record.filename = filename
+                resume_record.parsed_json = structured_data
+            else:
+                resume_record = Resume(user_id=user_id, filename=filename, parsed_json=structured_data)
+                db.session.add(resume_record)
+                
+            db.session.commit()
+            
         except Exception as e:
+            db.session.rollback()
             return error_response(f"Failed to parse file: {str(e)}", 500)
             
-        return success_response("File uploaded and parsed successfully", {
-            "filename": filename,
-            "structured_data": structured_data
-        })
+        # Return success without exposing the internal AI profile
+        return success_response("Resume analyzed successfully.")
         
     return error_response("File type not allowed. Please upload PDF or DOCX.", 400)
 

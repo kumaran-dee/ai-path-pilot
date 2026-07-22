@@ -39,18 +39,37 @@ class GeminiService:
     def extract_resume_data(self, text: str) -> dict:
         prompt = f"""
         Extract the following information from the resume text below.
-        Return ONLY a raw JSON object (without markdown code blocks) matching this schema exactly:
+        Return ONLY a raw JSON object (without markdown code blocks) matching this schema exactly.
+        If a field is missing or not applicable, return null or an empty array/string as appropriate.
+        
         {{
-            "Name": "string",
-            "Skills": ["string"],
-            "Projects": [ {{"title": "string", "description": "string"}} ],
-            "Education": ["string"],
+            "FullName": "string",
+            "EmailAddress": "string",
+            "PhoneNumber": "string",
+            "LinkedInProfile": "string",
+            "GitHubProfile": "string",
+            "PortfolioWebsite": "string",
+            "CurrentLocation": "string",
+            "CareerObjective": "string",
+            "TotalExperienceYears": "string",
+            "EducationDetails": ["string"],
+            "TechnicalSkills": ["string"],
+            "ProgrammingLanguages": ["string"],
+            "FrameworksAndLibraries": ["string"],
+            "ToolsAndTechnologies": ["string"],
+            "Databases": ["string"],
+            "CloudPlatforms": ["string"],
+            "SoftSkills": ["string"],
+            "Projects": [ {{"Title": "string", "Description": "string", "TechnologiesUsed": ["string"]}} ],
+            "Internships": ["string"],
+            "WorkExperience": ["string"],
             "Certifications": ["string"],
-            "Experience": ["string"],
+            "Achievements": ["string"],
+            "ResearchPublications": ["string"],
+            "LanguagesKnown": ["string"],
             "Interests": ["string"],
-            "Career Domain": "string",
-            "Resume Score": 85,
-            "Career Readiness": "string"
+            "CareerDomain": "string",
+            "PreferredRoles": ["string"]
         }}
         
         Resume Text:
