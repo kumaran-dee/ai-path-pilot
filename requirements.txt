@@ -3,6 +3,7 @@ Flask-SQLAlchemy==3.1.1
 Flask-JWT-Extended==4.6.0
 python-dotenv==1.0.1
 pdfplumber==0.11.0
+pypdf==4.3.1
 python-docx==1.1.0
 Werkzeug==3.0.1
 requests==2.32.3
