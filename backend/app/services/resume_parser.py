@@ -56,7 +56,7 @@ class ResumeParser:
             "personal_information": {
                 "full_name": "Candidate Profile",
                 "career_summary": "Extracted text-profile.",
-                "current_status": ""
+                "current_status": "Fresher"
             },
             "contact_details": {
                 "email": "",
@@ -99,6 +99,9 @@ class ResumeParser:
                 "experience_count": 0
             }
         }
+
+        if not text:
+            return profile
 
         # 1. Extract Name (first line of text that looks like a name)
         lines = [line.strip() for line in text.split('\n') if line.strip()]
@@ -166,7 +169,6 @@ class ResumeParser:
             elif s in tools_list:
                 profile["technical_skills"]["tools"].append(s)
 
-        # Add generic skills block to career domain
         profile["career_domain"] = ["Software Engineering"]
         profile["preferred_roles"] = ["Software Developer"]
 
@@ -272,7 +274,6 @@ Resume:
 {resume_text}
 """
         try:
-            # Try loading the AI response
             try:
                 from app.services.gemini_service import gemini_service
                 response_text = gemini_service.generate_content(prompt)
@@ -295,15 +296,16 @@ Resume:
             profile = json.loads(cleaned_text)
         except Exception as e:
             print(f"Gemini API parse failed or key missing: {e}. Falling back to heuristic text-parsing.")
-            # Use direct regex/heuristics to extract real details from the file, avoiding placeholder Ashwin Siva info
             profile = self.heuristic_parse(resume_text)
 
-        # Inject compatibility keys so comparison and dashboard routes continue to function
+        # ── Inject compatibility keys for front-end rendering ──
+        # Top-level fields
         profile["FullName"] = profile.get("personal_information", {}).get("full_name") or ""
         profile["ResumeScore"] = profile.get("resume_score", 0)
         profile["CareerReadinessScore"] = profile.get("career_readiness", {}).get("overall_score") or 0
         profile["Skills"] = profile.get("skills", [])
         
+        # Tech skills flattening
         tech_skills_dict = profile.get("technical_skills", {})
         all_tech_skills = []
         if isinstance(tech_skills_dict, dict):
@@ -312,6 +314,8 @@ Resume:
                     all_tech_skills.extend(v)
         profile["TechnicalSkills"] = all_tech_skills
         profile["SoftSkills"] = profile.get("soft_skills", [])
+        
+        # Arrays
         profile["Education"] = profile.get("education", [])
         profile["Experience"] = profile.get("experience", [])
         profile["Projects"] = profile.get("projects", [])
@@ -321,11 +325,35 @@ Resume:
         profile["Languages"] = profile.get("languages", [])
         profile["Interests"] = profile.get("interests", [])
         
+        # Roles and domains
         c_domain = profile.get("career_domain", "")
         profile["CareerDomain"] = ", ".join(c_domain) if isinstance(c_domain, list) else str(c_domain)
-        
         pref_roles = profile.get("preferred_roles", "")
         profile["PreferredRole"] = ", ".join(pref_roles) if isinstance(pref_roles, list) else str(pref_roles)
+        profile["PreferredRoles"] = pref_roles if isinstance(pref_roles, list) else [str(pref_roles)]
+        
+        # Contact details mapping
+        contact = profile.get("contact_details", {})
+        if isinstance(contact, dict):
+            profile["EmailAddress"] = contact.get("email") or ""
+            profile["PhoneNumber"] = contact.get("phone") or ""
+            profile["Location"] = contact.get("location") or ""
+            profile["LinkedInURL"] = contact.get("linkedin") or ""
+            profile["GitHubURL"] = contact.get("github") or ""
+            profile["PortfolioURL"] = contact.get("portfolio") or ""
+        else:
+            profile["EmailAddress"] = ""
+            profile["PhoneNumber"] = ""
+            profile["Location"] = ""
+            profile["LinkedInURL"] = ""
+            profile["GitHubURL"] = ""
+            profile["PortfolioURL"] = ""
+            
+        profile["YearsOfExperience"] = profile.get("years_of_experience") or "0 (Student/Fresher)"
+        
+        # Strengths & Weaknesses
+        profile["ResumeStrengths"] = profile.get("career_readiness", {}).get("strengths", [])
+        profile["ResumeWeaknesses"] = profile.get("career_readiness", {}).get("areas_to_improve", [])
 
         return profile
 
