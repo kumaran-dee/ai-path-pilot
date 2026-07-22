@@ -1,7 +1,7 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Link, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { LayoutDashboard, FileText, Briefcase, TrendingUp, Map, MessageSquare } from 'lucide-react';
+import { LayoutDashboard, FileText, Briefcase, TrendingUp, Map, MessageSquare, MessageCircle } from 'lucide-react';
 
 import Dashboard from './pages/Dashboard';
 import ResumeUpload from './pages/ResumeUpload';
@@ -59,6 +59,17 @@ function App() {
             <Route path="/chat" element={<AgentChat />} />
           </Routes>
         </main>
+        
+        {/* Fixed WhatsApp Join Button */}
+        <a
+          href="https://chat.whatsapp.com/GDXtxLFZdvs228lJm6WBLd"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="fixed bottom-6 right-6 bg-[#25D366] hover:bg-[#128C7E] text-white p-4 rounded-full shadow-[0_4px_12px_rgba(37,211,102,0.4)] transition-all z-50 flex items-center justify-center cursor-pointer hover:-translate-y-1 hover:shadow-[0_6px_16px_rgba(37,211,102,0.6)]"
+          title="Join WhatsApp Group"
+        >
+          <MessageCircle size={28} />
+        </a>
       </div>
     </Router>
   );
