@@ -1,7 +1,7 @@
 {
     "info": {
-        "name": "Agentic AI Platform API",
-        "description": "API collection for the Agentic AI platform including authentication, resume uploading, opportunity matching, and notifications.",
+        "name": "Path Pilot Platform API",
+        "description": "API collection for the Path Pilot platform including authentication, resume uploading, opportunity matching, and notifications.",
         "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
     },
     "item": [

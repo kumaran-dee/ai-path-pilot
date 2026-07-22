@@ -1,6 +1,6 @@
-# Agentic AI Platform
+# Path Pilot Platform
 
-An Agentic AI platform that intelligently discovers Jobs, Internships, Hackathons, and Research Funding while guiding students with AI-driven recommendations, skill-gap analysis, and proactive notifications.
+An Path Pilot platform that intelligently discovers Jobs, Internships, Hackathons, and Research Funding while guiding students with AI-driven recommendations, skill-gap analysis, and proactive notifications.
 
 ## Project Structure
 - `backend/`: Flask backend powered by SQLite and multiple AI Agents.

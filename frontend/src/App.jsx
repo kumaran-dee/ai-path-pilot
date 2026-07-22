@@ -23,7 +23,7 @@ function Sidebar() {
     <div className="w-64 bg-surface border-r border-gray-800 flex flex-col h-screen">
       <div className="p-6">
         <h1 className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-primary to-secondary">
-          Agentic AI
+          Path Pilot
         </h1>
       </div>
       <nav className="flex-1 mt-6">
