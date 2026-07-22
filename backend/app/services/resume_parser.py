@@ -112,22 +112,23 @@ Resume:
 
         api_key = os.getenv("GEMINI_API_KEY")
         if not api_key:
-            raise ValueError("GEMINI_API_KEY is not set.")
-
-        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={api_key}"
-        data = json.dumps({
-            "contents": [{"parts": [{"text": prompt}]}]
-        }).encode('utf-8')
-        
-        req = urllib.request.Request(url, data=data, headers={'Content-Type': 'application/json'})
-        
-        try:
-            with urllib.request.urlopen(req) as response:
-                response_data = json.loads(response.read().decode())
-                result = response_data['candidates'][0]['content']['parts'][0]['text']
-        except Exception as e:
-            print(f"Error calling Gemini REST API: {e}")
+            print("WARNING: GEMINI_API_KEY is not set. Using fallback empty profile.")
             result = "{}"
+        else:
+            url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={api_key}"
+            data = json.dumps({
+                "contents": [{"parts": [{"text": prompt}]}]
+            }).encode('utf-8')
+            
+            req = urllib.request.Request(url, data=data, headers={'Content-Type': 'application/json'})
+            
+            try:
+                with urllib.request.urlopen(req) as response:
+                    response_data = json.loads(response.read().decode())
+                    result = response_data['candidates'][0]['content']['parts'][0]['text']
+            except Exception as e:
+                print(f"Error calling Gemini REST API: {e}")
+                result = "{}"
 
         result = result.replace("```json","")
         result = result.replace("```","")
@@ -137,7 +138,7 @@ Resume:
         except json.JSONDecodeError:
             profile = {}
 
-        # ── Inject compatibility keys for front-end rendering ──
+        # â”€â”€ Inject compatibility keys for front-end rendering â”€â”€
         profile["FullName"] = profile.get("personal_information", {}).get("full_name") or ""
         profile["ResumeScore"] = profile.get("resume_score", 0)
         profile["CareerReadinessScore"] = profile.get("career_readiness", {}).get("overall_score") or 0

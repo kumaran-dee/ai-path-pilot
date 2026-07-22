@@ -14,8 +14,8 @@ class GeminiService:
 
     def generate_content(self, prompt: str) -> str:
         if not self.api_key or self.api_key == "your_gemini_api_key_here":
-            raise ValueError("GEMINI_API_KEY is not configured.")
-            
+            print("WARNING: GEMINI_API_KEY is not configured. Falling back to mock response.")
+            return self._get_mock_response(prompt)
         # Use raw HTTP request to bypass protobuf/Python 3.14 crashes!
         url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={self.api_key}"
         
