@@ -168,57 +168,36 @@ class ProfileScanner:
                 f"https://api.github.com/users/{username}", 
                 headers={'User-Agent': 'Mozilla/5.0'}
             )
-            with urllib.request.urlopen(req) as response:
+            with urllib.request.urlopen(req, timeout=3) as response:
                 data = json.loads(response.read().decode())
                 
                 name = data.get("name") or data.get("login") or "Unknown"
-                bio = data.get("bio") or "No bio provided"
                 public_repos = data.get("public_repos", 0)
                 followers = data.get("followers", 0)
                 
-                prompt = f"""
-                Analyze this GitHub profile and provide a score out of 100 based on its strength for a software engineering role.
-                Bio: {bio}
-                Public Repos: {public_repos}
-                Followers: {followers}
-                
-                Return ONLY a JSON object matching this schema:
-                {{"score": 85}}
-                """
-                
-                ai_resp = gemini_service.generate_content(prompt)
-                score_data = self._parse_json(ai_resp, default={"score": 75})
+                # Fast Python-based heuristic score
+                score = min(100, 50 + (public_repos * 2) + (followers * 5))
                 
                 return {
                     "username": name,
-                    "score": score_data.get("score", 75)
+                    "score": score
                 }
         except Exception as e:
             print(f"GitHub API Error: {e}")
             return self._simulate_scan("github", url_or_username)
             
     def _simulate_scan(self, platform: str, value: str) -> dict:
-        prompt = f"""
-        The user provided the following input for their {platform} profile: "{value}"
-        
-        If the input is just a casual greeting (like "hi", "hello") or nonsensical, the score should be very low (e.g. 5-15) and the username should be "Invalid Input".
-        
-        If it looks like a valid URL or username, simulate analyzing their bio, posts, and professional history on {platform}.
-        Generate a realistic name of the person (or use the one in the URL) and a score out of 100 based on how strong their profile appears.
-        
-        Return ONLY a JSON object matching this schema exactly without any markdown code blocks:
-        {{
-            "username": "string",
-            "score": 80
-        }}
-        """
-        
-        ai_resp = gemini_service.generate_content(prompt)
-        parsed = self._parse_json(ai_resp, default={"username": "Unknown", "score": 50})
-        
+        # Avoid Vercel 10s timeout by not using Gemini for fake scores
+        # We simulate a solid profile score for demo purposes
+        username = "Profile Found"
+        if "linkedin.com/in/" in value:
+            username = value.split("linkedin.com/in/")[-1].strip("/").replace("-", " ").title()
+        elif "github.com/" in value:
+            username = value.split("github.com/")[-1].strip("/")
+            
         return {
-            "username": parsed.get("username", "Unknown"),
-            "score": parsed.get("score", 50)
+            "username": username,
+            "score": 85
         }
         
     def _parse_json(self, text: str, default: dict) -> dict:
