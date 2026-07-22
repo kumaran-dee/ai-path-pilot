@@ -40,7 +40,36 @@ def match_resume_job():
         
         try:
             # 1. Parse and extract resume profile
-            resume_data = resume_parser.parse_resume(filepath, filename)
+            from app.routes.resume import extract_text_pdfplumber, extract_text_pypdf, extract_text_docx, extract_via_gemini_vision
+            
+            with open(filepath, 'rb') as f:
+                file_bytes = f.read()
+                
+            ext = filename.rsplit('.', 1)[1].lower()
+            raw_text = ""
+            resume_data = None
+            
+            if ext == 'pdf':
+                raw_text = extract_text_pdfplumber(filepath)
+                if not raw_text:
+                    raw_text = extract_text_pypdf(filepath)
+                if not raw_text:
+                    resume_data = extract_via_gemini_vision(file_bytes, filename, "application/pdf")
+            elif ext in ('docx', 'doc'):
+                raw_text = extract_text_docx(filepath)
+                if not raw_text:
+                    resume_data = extract_via_gemini_vision(
+                        file_bytes, filename,
+                        "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                    )
+            
+            if resume_data is None:
+                resume_data = resume_parser.extract_candidate_profile(raw_text)
+
+            # Save the detailed resume profile to a JSON file as requested
+            import json
+            with open("detailed_resume_profile.json", "w", encoding="utf-8") as f:
+                json.dump(resume_data, f, indent=4)
             
             # Associate with dummy user_id = 1
             user_id = 1
