@@ -627,12 +627,9 @@ export default function Compare() {
                 ))}
               </ul>
               {results.missing_skills?.length > 0 && (
-                <button
-                  onClick={() => navigate('/roadmap', { state: { missingSkills: results.missing_skills } })}
-                  className="w-full py-3 bg-yellow-500/10 text-yellow-500 border border-yellow-500/30 hover:bg-yellow-500/20 rounded-xl flex items-center justify-center font-semibold transition-all"
-                >
+                <div className="w-full py-3 bg-yellow-500/10 text-yellow-400 border border-yellow-500/30 rounded-xl flex items-center justify-center font-semibold">
                   Generate Learning Roadmap <ArrowRight className="ml-2" size={20} />
-                </button>
+                </div>
               )}
             </div>
           </div>
@@ -656,12 +653,45 @@ export default function Compare() {
             </div>
           </div>
 
-          <div className="mt-12 bg-gray-900/80 p-8 rounded-2xl border border-gray-700 flex flex-col items-center text-center">
-            <h3 className="text-lg font-bold text-gray-400 mb-2 uppercase tracking-widest">Should you apply?</h3>
-            <div className={`text-4xl font-extrabold mb-4 ${results.should_apply === 'YES' ? 'text-green-400' : results.should_apply === 'MAYBE' ? 'text-yellow-400' : 'text-red-400'}`}>
-              {results.should_apply}
+          {/* Should You Apply Banner */}
+          <div className="mt-12 bg-gray-900/80 p-8 rounded-2xl border border-gray-700 flex flex-col md:flex-row items-center justify-between gap-6">
+            {/* Left: Trophy icon */}
+            <div className="flex-shrink-0 w-20 h-20 rounded-full border-4 border-yellow-500/60 bg-yellow-500/10 flex items-center justify-center text-4xl">
+              ⭐
             </div>
-            <p className="text-gray-300 leading-relaxed max-w-3xl">{results.reason}</p>
+
+            {/* Center: text */}
+            <div className="flex-1 text-center">
+              <p className="text-sm font-bold text-gray-400 uppercase tracking-widest mb-1">Should You Apply?</p>
+              <div className={`text-4xl font-extrabold mb-3 ${
+                results.should_apply === 'YES' ? 'text-green-400' :
+                results.should_apply === 'MAYBE' ? 'text-yellow-400' :
+                'text-red-400'
+              }`}>
+                {results.should_apply === 'YES' ? 'WORTH APPLYING' :
+                 results.should_apply === 'MAYBE' ? 'WORTH APPLYING' :
+                 'SKIP THIS ONE'}
+              </div>
+              <p className="text-gray-300 leading-relaxed max-w-xl mx-auto text-sm">{results.reason}</p>
+            </div>
+
+            {/* Right: Circular match score */}
+            <div className="flex-shrink-0 flex flex-col items-center">
+              <svg width="100" height="100" viewBox="0 0 100 100">
+                <circle cx="50" cy="50" r="42" fill="none" stroke="#1f2937" strokeWidth="10"/>
+                <circle
+                  cx="50" cy="50" r="42" fill="none"
+                  stroke={results.match_score >= 70 ? '#22c55e' : results.match_score >= 50 ? '#eab308' : '#ef4444'}
+                  strokeWidth="10"
+                  strokeDasharray={`${2 * Math.PI * 42}`}
+                  strokeDashoffset={`${2 * Math.PI * 42 * (1 - (results.match_score || 0) / 100)}`}
+                  strokeLinecap="round"
+                  transform="rotate(-90 50 50)"
+                />
+                <text x="50" y="46" textAnchor="middle" fill="white" fontSize="18" fontWeight="bold">{results.match_score}%</text>
+                <text x="50" y="62" textAnchor="middle" fill="#9ca3af" fontSize="9">MATCH</text>
+              </svg>
+            </div>
           </div>
         </motion.div>
       )}
