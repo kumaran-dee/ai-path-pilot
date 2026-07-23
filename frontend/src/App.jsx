@@ -6,7 +6,6 @@ import { LayoutDashboard, FileText, Briefcase, TrendingUp, Map, HelpCircle, Mess
 import Dashboard from './pages/Dashboard';
 import ResumeUpload from './pages/ResumeUpload';
 import Opportunities from './pages/Opportunities';
-import LearningRoadmap from './pages/LearningRoadmap';
 import AgentChat from './pages/AgentChat';
 import Compare from './pages/Compare';
 import Login from './pages/Login';
@@ -22,7 +21,6 @@ function Sidebar() {
   const menuItems = [
     { path: '/', label: 'Dashboard', icon: <LayoutDashboard size={20} /> },
     { path: '/compare', label: 'Compare', icon: <Briefcase size={20} /> },
-    { path: '/roadmap', label: 'Roadmap', icon: <Map size={20} /> },
     { path: '/chat', label: 'FAQ', icon: <HelpCircle size={20} /> },
   ];
 
@@ -106,7 +104,6 @@ function AppRoutes() {
           {/* Protected Routes */}
           <Route path="/" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
           <Route path="/compare" element={<ProtectedRoute><Compare /></ProtectedRoute>} />
-          <Route path="/roadmap" element={<ProtectedRoute><LearningRoadmap /></ProtectedRoute>} />
           <Route path="/chat" element={<ProtectedRoute><AgentChat /></ProtectedRoute>} />
           
           {/* Admin Routes */}
