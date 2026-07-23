@@ -592,8 +592,6 @@ export default function Compare() {
             </div>
             <div className="mt-6 md:mt-0 flex space-x-8">
               {[
-                { val: results.resume_score, label: 'Resume Score', color: 'text-blue-400' },
-                { val: results.career_readiness, label: 'Career Readiness', color: 'text-pink-400' },
                 { val: `${results.match_score}%`, label: 'Match Score', color: 'text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-purple-400' },
               ].map(({ val, label, color }) => (
                 <div key={label} className="flex flex-col items-center">
