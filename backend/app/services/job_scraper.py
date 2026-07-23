@@ -49,6 +49,10 @@ class JobScraper:
             cleaned_description = gemini_service.generate_content(prompt)
             return cleaned_description.strip()
             
+        except requests.exceptions.ConnectionError as e:
+            raise ValueError("Invalid job link. The URL could not be reached or does not exist.")
+        except requests.exceptions.Timeout as e:
+            raise ValueError("Invalid job link. The connection timed out.")
         except Exception as e:
             print(f"Scraping failed for URL {url}: {e}. Falling back to AI-synthesized description.")
             # Use Gemini to generate a plausible job description based on the URL context (handles LinkedIn bot-blocking)

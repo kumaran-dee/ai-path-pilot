@@ -476,7 +476,12 @@ export default function Compare() {
       }
     } catch (err) {
       console.error('Comparison failed:', err);
-      alert('Failed to analyze the fit. Make sure the backend is running.');
+      const errorMsg = err.response?.data?.message || err.message || '';
+      if (errorMsg.includes('Invalid job link')) {
+        setJobLinkError('Invalid job link. The URL could not be reached.');
+      } else {
+        alert(`Failed to analyze the fit: ${errorMsg}. Make sure the backend is running.`);
+      }
     } finally {
       setIsComparing(false);
     }
